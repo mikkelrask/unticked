@@ -32,6 +32,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.terminaltodo.core.TaskView
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -323,9 +326,18 @@ fun TodoScreen(
             Text((task.priority?.let { "($it) " } ?: "") + task.description, style = MaterialTheme.typography.bodyLarge,
                 color = if (task.completed) colors.onSurfaceVariant else colors.onSurface,
                 textDecoration = if (task.completed) TextDecoration.LineThrough else null)
+            val reminderLabel = task.reminder?.atZone(ZoneId.systemDefault())?.let { time ->
+                val day = time.toLocalDate()
+                val date = when (day) {
+                    today -> "today"
+                    today.plusDays(1) -> "tomorrow"
+                    else -> time.format(DateTimeFormatter.ofPattern(if (day.year == today.year) "d MMM" else "d MMM uuuu", LocalLocale.current.platformLocale))
+                }
+                "remind:$date ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}"
+            }
             val meta: AnnotatedString = buildAnnotatedString {
                 val parts = task.projects.map { it.text to colors.primary } + task.contexts.map { it.text to colors.secondary } + task.metadata.map { token ->
-                    token.text to if (token.text.startsWith("due:") && task.due?.isBefore(today) == true && !task.completed) colors.error else colors.onSurfaceVariant
+                    (if (token.text.startsWith("remind:") && reminderLabel != null) reminderLabel else token.text) to if (token.text.startsWith("due:") && task.due?.isBefore(today) == true && !task.completed) colors.error else colors.onSurfaceVariant
                 }
                 parts.forEachIndexed { index, (text, color) -> if (index > 0) append("  "); withStyle(SpanStyle(color = color)) { append(text) } }
             }

@@ -7,10 +7,9 @@ A terminal-inspired Android app for your todo.txt. Plain text, bracket checkboxe
 - Complete and reopen tasks with `[ ]` and `[X]`.
 - Add tasks and edit their original text.
 - Pick priorities, due dates, and explicit reminder times.
-- Reuse existing `@contexts` and `+projects`.
+- Select between existing `@contexts` and `+projects`.
 - Search and switch between Today, All, and Done.
 - Undo the last change, with a brief inline action and a shortcut in Settings.
-- Choose Vesper (default), Dark, or Light.
 
 <img src="docs/screenshots/unticked-refined-vesper.png" width="280" alt="unticked in Vesper with synthetic tasks and bracket checkboxes">
 
@@ -18,7 +17,7 @@ Your file stays a normal todo.txt: no accounts, hidden task IDs, or proprietary 
 
 ## Getting started
 
-unticked is currently an early development build. There is no signed release APK yet; build it from source using Android Studio.
+unticked is currently an early development build. There is no signed release APK; build it from source using Android Studio.
 
 1. Open Settings → Select file and choose your local todo.txt.
 2. Tap a checkbox to complete or reopen a task; tap its text to edit.
@@ -35,7 +34,7 @@ Enable Reminders in Settings and allow notifications. Due dates alone do not not
 (A) Backup workstation +maintenance due:2026-10-14 remind:2026-10-14T18:00:00+02:00
 ```
 
-The date/time picker writes the timestamp for you. Notifications open the app.
+The date/time picker writes the timestamp for you. The task list displays a shorter local-time label such as `remind:tomorrow 18:00` or `remind:14 Oct 18:00`; the file and editor retain the full timestamp. Notifications open the app.
 
 Delivery is approximate and may be delayed by Android battery restrictions. Background checks can discover synced reminders late. The app checks the task again before delivery and suppresses reminders for completed, changed, or ambiguous tasks. If the file is unavailable, the notice says it could not verify the reminder.
 
