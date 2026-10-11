@@ -136,6 +136,10 @@ object TaskParser {
         }
         if (remindTokens.size > 1) issues.add("Ambiguous reminder")
         if (remindTokens.size == 1 && reminder == null) issues.add("Invalid reminder")
+        val recurrence = metadata.filter { it.text.startsWith("rec:") }
+        if (recurrence.size > 1) issues.add("Ambiguous recurrence")
+        else if (recurrence.size == 1 && !Recurrence.supported(recurrence.single().text)) issues.add("Unsupported recurrence")
+        if (recurrence.isNotEmpty() && due == null) issues.add("Recurrence needs a valid due date")
         val visible = body.filterNot { it in projects || it in contexts || it in metadata }
         val description = visible.joinToString(" ") { it.text }.ifBlank { raw }
         return TaskView(line, completed, priority, completion, creation, description, projects, contexts, metadata, due, reminder, issues)

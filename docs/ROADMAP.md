@@ -6,6 +6,7 @@ unticked is an early Android development build. The current package and signing 
 
 - Plain todo.txt selection, search and Today/All/Done views.
 - Complete/reopen, task editing, additions and conservative session undo.
+- Completion-based and due-based recurrence, with one-write successor creation.
 - Priority, due-date and explicit reminder pickers.
 - Existing project/context suggestions.
 - Durable private drafts and verified-write recovery copies.

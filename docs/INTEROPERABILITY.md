@@ -43,3 +43,13 @@ External sync is transport, not a transaction coordinator. Avoid independent sim
 M2 identifies a changed-file target only if its exact original line bytes and terminator occur once in both the original and current snapshot. If the whole snapshot is unchanged, the original physical row can distinguish duplicates. A changed/deleted/duplicated target blocks the save; it is never matched by display text alone. Stable identity cannot be guaranteed when another editor replaces one task with an indistinguishable copy.
 
 Raw editing is an explicit replacement of the selected line, not reconstruction from parsed fields. Adds reject blank/multiline/NUL input and oversized lines. Appending re-reads the latest document and retains unrelated external edits. Undo deliberately requires an exact whole-file match and never rebases. A process interruption after a save was attempted leaves an uncertain draft and requires inspection instead of repeating an append.
+
+## Recurrence extension
+
+unticked recognises `rec:[+][N]{d,w,m,y}`, where N is a positive integer (up to six digits). Numbered forms without + calculate from the completion date; + forms calculate from the old due date. The unit-only shorthand (`rec:w`, etc.) is due-based in unticked, following the requested shorthand behaviour. Other tools may interpret shorthand differently; prefer explicit `rec:+1w` for due-based portability. This metadata is an extension, not official todo.txt recurrence syntax.
+
+One unambiguous valid due date is required. Completion and successor append are a single proposed snapshot, verified write and undo record. Other bytes retain their existing spelling/spacing; a new creation date is written only if the original had one. Reminder timestamps advance by the due-date difference in calendar days, retaining their numeric offset and time, not inferring a timezone from an offset.
+
+Month/year intervals clamp to the last valid date, so repeated monthly recurrence can drift after a short month. Only one successor is created; strict overdue tasks are not advanced repeatedly to the present. Reopening leaves successors in place. An exact existing successor prevents another identical append. No hidden IDs or companion task database are introduced.
+
+Reference: [todo.txt-cli-dorecur](https://github.com/owenh000/todo.txt-cli-dorecur), which distinguishes completion-based and strict due-based intervals.

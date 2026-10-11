@@ -7,6 +7,7 @@ A terminal-inspired Android app for your todo.txt. Plain text, bracket checkboxe
 - Complete and reopen tasks with `[ ]` and `[X]`.
 - Add tasks and edit their original text.
 - Pick priorities, due dates, and explicit reminder times.
+- Recur tasks using plain-text `rec:` fields.
 - Select between existing `@contexts` and `+projects`.
 - Search and switch between Today, All, and Done.
 - Undo the last change, with a brief inline action and a shortcut in Settings.
@@ -25,6 +26,25 @@ unticked is currently an early development build. There is no signed release APK
 4. Pull down to refresh after changes from another device.
 
 The sample tasks shown before selecting a file are disposable and stay in memory.
+
+## Recurring tasks
+
+Add a `rec:` field to a task with a valid due date. Completing it keeps the completed occurrence and appends the next one in the same save.
+
+- `rec:1w`: one week after completion.
+- `rec:+3m`: three months after the previous due date.
+- Units are `d`, `w`, `m`, and `y`, with a positive integer interval.
+- Shorthand `rec:d`, `rec:w`, `rec:m`, and `rec:y` means one interval **from the previous due date** in unticked. Use `rec:+1w` for an explicit due-based convention shared with other tools.
+
+```text
+(A) Pay rent +home due:2026-10-01 rec:+1m
+```
+
+The successor keeps priority, tags and other metadata. Its creation date becomes the completion date if the original had one. An explicit reminder moves by the difference between the old and new due dates, retaining its written time and numeric offset.
+
+Month/year changes clamp to the last valid day (31 January → 28 February in a non-leap year). Due-based recurrence creates just one next occurrence, even if it is still overdue. An identical existing successor is not appended again. Reopening does not remove the next occurrence; Undo immediately after completion reverses both changes.
+
+Duplicate or invalid recurrence, due-date or reminder fields block recurring completion and keep the draft for editing.
 
 ## Reminders
 

@@ -68,7 +68,9 @@ object TaskEdits {
             body
         }
         validateLine(replacement)
-        return current.patch(line.span, replacement)
+        val successor = Recurrence.successor(task, today)
+        val completed = current.patch(line.span, replacement)
+        return if (successor != null && current.lines.none { it.text == successor }) append(completed, successor) else completed
     }
     fun validateLine(text: String) {
         require(text.isNotBlank()) { "Enter a task before saving" }
