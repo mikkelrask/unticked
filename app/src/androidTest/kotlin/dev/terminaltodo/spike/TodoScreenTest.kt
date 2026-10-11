@@ -173,11 +173,13 @@ class TodoScreenTest {
         compose.onNodeWithText("due date").performClick()
         compose.onNodeWithText("Multiple due fields: edit the task line to choose which to keep").assertIsDisplayed()
     }
-    @Test fun addAndCheckboxKeepMinimumTouchTargets() {
+    @Test fun addKeepsMinimumTouchTargetAndCheckboxColumnFitsItsGlyph() {
         val snapshot = demoSnapshot()
         compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, tasks = snapshot.lines.mapNotNull(TaskParser::parse), writable = true)) } }
         compose.onNodeWithContentDescription("Add task").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
-        compose.onNodeWithContentDescription("Complete task: Fix deployment script").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+        compose.onNodeWithContentDescription("Complete task: Fix deployment script").assertHeightIsAtLeast(48.dp)
+        val bounds = compose.onNodeWithContentDescription("Complete task: Fix deployment script").getUnclippedBoundsInRoot()
+        assertTrue(bounds.right - bounds.left <= 40.dp)
         compose.onNodeWithContentDescription("Settings").assertHeightIsAtLeast(48.dp)
     }
     @Test fun existingTagMenusInsertContextAndProjectWithoutDuplicates() {

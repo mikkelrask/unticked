@@ -320,7 +320,7 @@ fun TodoScreen(
     val colors = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
         val ink = if (task.completed) colors.secondary else colors.onSurfaceVariant
-        Box(Modifier.widthIn(min = 48.dp).heightIn(min = 48.dp).toggleable(value = task.completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
+        Box(Modifier.heightIn(min = 48.dp).toggleable(value = task.completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
             .semantics { contentDescription = (if (task.completed) "Reopen task: " else "Complete task: ") + task.description }
             .padding(end = 4.dp, top = 2.dp), contentAlignment = Alignment.TopStart) {
             Text(if (task.completed) "[X]" else "[ ]", style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.clearAndSetSemantics { })
