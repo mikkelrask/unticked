@@ -32,3 +32,7 @@ Implemented and validated on the actual Android 16 handset and synced folder; se
 Owner requested `[ ]` / `[X]` TUI controls and the next logical complete/edit/add steps while the phone is unplugged. Implemented complete/reopen, explicit single-line editing, append, conservative unique-line rebase, session undo, atomic private drafts and retained write recovery. Only the local emulator's synthetic document was mutated during this work. See docs/M2_VALIDATION.md.
 
 Next: richer field editing (priority/due pickers with token-level patches), further accessibility coverage, then M3 reminders. The M2 build has now been installed and its complete/reopen/edit/add/undo flow checked on a disposable synced handset document. The real todo.txt was reopened and its before/after hash matched.
+
+## UI polish
+
+Owner requested cleaner Settings, tighter task rows, a useful filename subtitle, and existing context/project choices. Implemented collapsed diagnostics, compact accessible rows, open/done counts and draft tag suggestions. Priority/due field pickers and reminders remain next.

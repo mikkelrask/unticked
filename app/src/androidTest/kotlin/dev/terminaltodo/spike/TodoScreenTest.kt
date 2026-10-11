@@ -1,6 +1,8 @@
 package dev.terminaltodo.spike
 
 import androidx.compose.ui.test.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
@@ -97,6 +99,34 @@ class TodoScreenTest {
         assertFalse(discarded)
         compose.onNodeWithText("Discard", ignoreCase = false).performClick()
         assertTrue(discarded)
+    }
+
+    @Test fun settingsKeepsDiagnosticActionsCollapsedUntilRequested() {
+        render()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithText("Create test file").assertDoesNotExist()
+        compose.onNodeWithText("Clear diagnostic recovery").assertDoesNotExist()
+        compose.onNodeWithText("Show sample tasks").assertDoesNotExist()
+        compose.onNodeWithText("Diagnostics").performClick()
+        compose.onNodeWithText("Create test file").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Clear diagnostic recovery").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Diagnostics").performScrollTo().performClick()
+        compose.onNodeWithText("Create test file").assertDoesNotExist()
+    }
+
+    @Test fun existingTagMenusInsertContextAndProjectWithoutDuplicates() {
+        val snapshot = demoSnapshot()
+        var text by androidx.compose.runtime.mutableStateOf("New task")
+        compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, tasks = snapshot.lines.mapNotNull(TaskParser::parse), writable = true,
+            draft = TaskDraft("demo", snapshot, null, text, "add")), onDraftText = { text = it }) } }
+        compose.onNodeWithText("@context").performClick()
+        compose.onNodeWithText("@computer").performClick()
+        assertEquals("New task @computer", text)
+        compose.onNodeWithText("+project").performClick()
+        compose.onNodeWithText("+homelab").performClick()
+        assertEquals("New task @computer +homelab", text)
+        compose.onNodeWithText("@context").performClick()
+        compose.onNodeWithText("@computer").assertDoesNotExist()
     }
 
 }

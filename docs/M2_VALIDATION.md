@@ -65,3 +65,11 @@ After the owner reconnected the OnePlus Nord 4 (Android 16), build `0.0.2-m2` wa
 - The real `todo.txt` was reopened, and its SHA-256 before/after this verification matched. No real task was changed by these checks.
 
 The new handset UI/write path is now checked. Full TalkBack, landscape/keyboard variations, abrupt storage faults and concurrent external-writer races remain untested.
+
+## UI polish and tag suggestions
+
+Build `0.0.3-m2` tightens the row minimum/padding while retaining 48dp checkbox and editor touch targets, replaces the generic file subtitle with open/done counts, and keeps Settings diagnostics collapsed by default. Context/project menus draw distinct suggestions from the selected file (including completed tasks), omit tags already in the draft, and insert only after an explicit selection. New tags remain free text. Menu controls can wrap onto another row when space is limited.
+
+Nine Compose tests plus the real-activity synthetic complete/reopen/edit/add/undo flow passed on the emulator; all ten tests ran without skips. New checks cover diagnostic disclosure and context/project insertion with duplicate exclusion. Lint remains clean. Screenshots cover the compact list/settings, tag menu, and narrow large-font editor. Task-storage/core code was unchanged by this polish.
+
+The UI polish build was installed on the handset; its real todo.txt hash matched before/after installation. Tag selection was validated on the emulator without saving changes to real handset tasks.

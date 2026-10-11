@@ -39,18 +39,20 @@ Debug APK: `app/build/outputs/apk/debug/app-debug.apk`. This package and debug s
 - Search matches raw task text, including project, context and unknown metadata tokens.
 - Tap `[ ]` to complete a task or `[X]` to reopen it. The controls have checkbox semantics and at least 48dp touch targets.
 - Tap a task body to edit its original line. Save changes only that line; untouched bytes stay unchanged. Projects, contexts, dates and unknown metadata remain plain text.
+- In the editor, `@context` and `+project` offer tags already used in this file; selecting one inserts it into the draft without duplicating an existing tag. New tags can still be typed normally.
 - `[+]` adds one task. New lines use the predominant existing line ending and preserve the file's final-newline convention.
 - `undo` reverses the last local change only when the file still matches that saved result. Undo is available for the current app session.
 - Drafts are kept privately across restarts. Back/keep draft closes the editor; discard asks explicitly. Changed/ambiguous targets block saving and keep the draft.
 - Settings also offers a raw document view; invalid UTF-8 is shown as hex, with writing disabled.
 - `refresh` re-reads the selected document; foreground return also refreshes it.
-- Settings offers Vesper, Dark and Light; Show sample tasks returns to synthetic data. Sample changes are in memory and reset on refresh; they never write your file.
+- The filename subtitle shows total open/done counts, independent of the current search/filter.
+- Settings keeps diagnostics collapsed and offers Vesper, Dark and Light; Show sample tasks returns to synthetic data. Sample changes are in memory and reset on refresh; they never write your file.
 
 Files are bounded to 8 MiB for this initial spike. Raw document dialogs show at most the first 64 KiB and say so. Read failures are shown as errors, never interpreted as an empty file.
 
 ## Disposable storage test
 
-Settings → Create test file launches ACTION_CREATE_DOCUMENT. Pick the same local provider/folder used for your synced tasks. Android creates a new file; this is never an edit of your selected todo.txt.
+Settings → Diagnostics → Create test file launches ACTION_CREATE_DOCUMENT. Pick the same local provider/folder used for your synced tasks. Android creates a new file; this is never an edit of your selected todo.txt.
 
 The app records private before/proposed bytes and an intent manifest before writing a long synthetic payload, then a shorter one. It closes each stream and verifies bytes by reading them back. The diagnostic reports provider authority and persisted permission status.
 

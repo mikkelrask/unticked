@@ -36,11 +36,14 @@ fun TodoScreen(
     var tab by rememberSaveable { mutableStateOf("All") }
     var search by rememberSaveable { mutableStateOf("") }
     var settings by rememberSaveable { mutableStateOf(false) }
+    var diagnosticsExpanded by rememberSaveable(settings) { mutableStateOf(false) }
     var rawDocument by rememberSaveable { mutableStateOf(false) }
     var editorHidden by rememberSaveable(state.draft?.source, state.draft?.line, state.draft?.kind) { mutableStateOf(false) }
     var discardConfirm by rememberSaveable { mutableStateOf(false) }
     var recoveryOpen by rememberSaveable { mutableStateOf(false) }
     var selectedRaw by rememberSaveable { mutableStateOf<String?>(null) }
+    val existingContexts = remember(state.tasks) { state.tasks.flatMap { it.contexts }.map { it.text }.distinct().sorted() }
+    val existingProjects = remember(state.tasks) { state.tasks.flatMap { it.projects }.map { it.text }.distinct().sorted() }
     val today = if (state.demo) LocalDate.of(2026, 10, 11) else LocalDate.now()
     val currentTab = tab // Lazy content must use the same tab snapshot as the filtered list.
     val shown = remember(state.tasks, currentTab, search, today) {
@@ -64,7 +67,12 @@ fun TodoScreen(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text(state.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-                        Text(if (state.demo) "sample buffer" else "selected document", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                        Text(when {
+                            state.loading -> "reading…"
+                            state.error != null -> "file unavailable"
+                            state.demo -> "sample buffer"
+                            else -> "${state.tasks.count { !it.completed }} open / ${state.tasks.count { it.completed }} done"
+                        }, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                     }
                     TextButton(onClick = onOpen, modifier = Modifier.heightIn(min = 48.dp)) { Text("file") }
                     TextButton(onClick = { settings = true }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Settings" }) { Text("···") }
@@ -149,12 +157,18 @@ fun TodoScreen(
                 }
                 HorizontalDivider(Modifier.padding(vertical = 12.dp))
                 TextButton(onClick = { settings = false; rawDocument = true }, enabled = state.snapshot != null) { Text("View raw document") }
-                TextButton(onClick = { settings = false; onDemo() }) { Text("Show sample tasks") }
-                Text("Storage diagnostics", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-                Text("Create a disposable file in the folder you want to test. Only that new file is written. The diagnostic does not write your task file.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
-                TextButton(onClick = onDiagnostic, enabled = !state.probing) { Text(if (state.probing) "Testing…" else "Create test file") }
-                state.diagnostic?.let { SelectionContainer { Text(it, style = MaterialTheme.typography.bodySmall) } }
-                TextButton(onClick = onClearRecovery, enabled = !state.probing) { Text("Clear diagnostic recovery") }
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button) { diagnosticsExpanded = !diagnosticsExpanded }
+                    .semantics { stateDescription = if (diagnosticsExpanded) "Expanded" else "Collapsed" }, verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (diagnosticsExpanded) "[-]" else "[+]", color = colors.onSurfaceVariant, modifier = Modifier.padding(end = 12.dp))
+                    Text("Diagnostics", color = colors.onSurfaceVariant)
+                }
+                if (diagnosticsExpanded) {
+                    TextButton(onClick = { settings = false; onDemo() }) { Text("Show sample tasks") }
+                    Text("Test file access with a new disposable file. Your task file is not used for this test.", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
+                    TextButton(onClick = onDiagnostic, enabled = !state.probing && !state.saving) { Text(if (state.probing) "Testing…" else "Create test file") }
+                    state.diagnostic?.let { SelectionContainer { Text(it, style = MaterialTheme.typography.bodySmall) } }
+                    TextButton(onClick = onClearRecovery, enabled = !state.probing && !state.saving) { Text("Clear diagnostic recovery") }
+                }
             }
         })
     }
@@ -168,6 +182,12 @@ fun TodoScreen(
                 if (draft.kind == "toggle") SelectionContainer { Text(draft.text) }
                 else OutlinedTextField(draft.text, onValueChange = onDraftText, enabled = !state.saving, readOnly = draft.proposedHash != null, singleLine = true,
                     label = { Text("Task line") }, modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodyMedium)
+                if (draft.kind != "toggle") {
+                    FlowRow(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                        ExistingTagMenu("@context", existingContexts, draft.text, !state.saving && draft.proposedHash == null, onDraftText)
+                        ExistingTagMenu("+project", existingProjects, draft.text, !state.saving && draft.proposedHash == null, onDraftText)
+                    }
+                }
                 Text("Keep +projects, @contexts and key:value fields in the line.", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
                 state.draftError?.let { Text(it, color = colors.error, modifier = Modifier.padding(top = 12.dp)) }
                 TextButton(onClick = { editorHidden = true }, enabled = !state.saving) { Text("keep draft") }
@@ -212,6 +232,29 @@ fun TodoScreen(
     }
 }
 
+@Composable private fun ExistingTagMenu(label: String, tags: List<String>, draft: String, enabled: Boolean, onChange: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val suggestions = remember(tags, draft) {
+        val present = Regex("\\S+").findAll(draft).map { it.value }.toSet()
+        tags.filterNot { it in present }
+    }
+    Box {
+        TextButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(label, maxLines = 1, softWrap = false)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.widthIn(max = 280.dp).heightIn(max = 240.dp)) {
+            if (suggestions.isEmpty()) DropdownMenuItem(text = { Text("No more existing tags") }, onClick = {}, enabled = false)
+            suggestions.forEach { tag ->
+                DropdownMenuItem(text = { Text(tag, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }, onClick = {
+                    expanded = false
+                    val separator = if (draft.isEmpty() || draft.last().isWhitespace()) "" else " "
+                    onChange(draft + separator + tag)
+                })
+            }
+        }
+    }
+}
+
 @Composable private fun GroupLabel(label: String, count: Int, alert: Boolean = false) {
     Text("// $label · $count ${if (count == 1) "task" else "tasks"}", style = MaterialTheme.typography.bodySmall,
         color = if (alert) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -220,7 +263,7 @@ fun TodoScreen(
 
 @Composable private fun TaskRow(task: TaskView, today: LocalDate, enabled: Boolean, onToggle: () -> Unit, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().heightIn(min = 88.dp).padding(vertical = 10.dp), verticalAlignment = Alignment.Top) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
         val ink = if (task.completed) colors.secondary else colors.onSurfaceVariant
         Box(Modifier.widthIn(min = 56.dp).heightIn(min = 48.dp).toggleable(value = task.completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
             .semantics { contentDescription = (if (task.completed) "Reopen task: " else "Complete task: ") + task.description }
@@ -237,7 +280,7 @@ fun TodoScreen(
                 }
                 parts.forEachIndexed { index, (text, color) -> if (index > 0) append("  "); withStyle(SpanStyle(color = color)) { append(text) } }
             }
-            if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 5.dp))
+            if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 3.dp))
             if (task.issues.isNotEmpty()) Text(task.issues.joinToString(" · "), color = colors.error, style = MaterialTheme.typography.bodySmall)
         }
     }
