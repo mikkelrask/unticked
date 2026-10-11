@@ -1,4 +1,12 @@
 plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.plugin.compose' }
+def releaseSigning = ['UNTICKED_KEYSTORE_PATH', 'UNTICKED_KEYSTORE_PASSWORD',
+                      'UNTICKED_KEY_ALIAS', 'UNTICKED_KEY_PASSWORD'].collectEntries {
+    [(it): providers.environmentVariable(it).orNull]
+}
+def hasReleaseSigning = releaseSigning.values().every { it != null && !it.isEmpty() }
+if (releaseSigning.values().any { it != null } && !hasReleaseSigning) {
+    throw new GradleException('Release signing requires all four UNTICKED_KEYSTORE_* / UNTICKED_KEY_* variables.')
+}
 android {
     namespace = 'dev.terminaltodo.spike'
     compileSdk = 37
@@ -12,9 +20,36 @@ android {
         testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
     }
     buildFeatures { compose = true }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile = file(releaseSigning.UNTICKED_KEYSTORE_PATH)
+                storePassword = releaseSigning.UNTICKED_KEYSTORE_PASSWORD
+                keyAlias = releaseSigning.UNTICKED_KEY_ALIAS
+                keyPassword = releaseSigning.UNTICKED_KEY_PASSWORD
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (hasReleaseSigning) signingConfig = signingConfigs.release
+        }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     testOptions { unitTests.returnDefaultValues = true }
     lint { abortOnError = true }
+}
+tasks.register('verifyReleaseInputs') {
+    doLast {
+        if (!hasReleaseSigning) throw new GradleException('Release signing credentials are missing.')
+        if (!file(releaseSigning.UNTICKED_KEYSTORE_PATH).isFile()) {
+            throw new GradleException('Release keystore does not exist.')
+        }
+        def tag = providers.environmentVariable('UNTICKED_RELEASE_TAG').orNull
+        if (tag != "v${android.defaultConfig.versionName}") {
+            throw new GradleException('Release tag must equal v followed by the app versionName.')
+        }
+    }
 }
 dependencies {
     implementation project(':core')

@@ -1,0 +1,77 @@
+name: Prepare APK release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing version tag matching versionName (for example v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unticked-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # Always dispatch from main; build only an existing tag on main's history.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate and check out version tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || { echo 'Invalid version tag'; exit 1; }
+          git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
+          git merge-base --is-ancestor "refs/tags/$RELEASE_TAG^{commit}" HEAD
+          git checkout --detach "refs/tags/$RELEASE_TAG"
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+      - name: Install project SDK
+        run: sdkmanager 'platforms;android-37' 'build-tools;37.0.0'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Run release checks
+        run: ./gradlew --no-daemon :core:test :app:test :app:lintRelease
+      - name: Build signed APK
+        shell: bash
+        env:
+          UNTICKED_KEYSTORE_BASE64: ${{ secrets.UNTICKED_KEYSTORE_BASE64 }}
+          UNTICKED_KEYSTORE_PASSWORD: ${{ secrets.UNTICKED_KEYSTORE_PASSWORD }}
+          UNTICKED_KEY_ALIAS: ${{ secrets.UNTICKED_KEY_ALIAS }}
+          UNTICKED_KEY_PASSWORD: ${{ secrets.UNTICKED_KEY_PASSWORD }}
+          UNTICKED_RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          : "${UNTICKED_KEYSTORE_BASE64:?Add the release signing secrets first}"
+          export UNTICKED_KEYSTORE_PATH="$RUNNER_TEMP/unticked-release.jks"
+          trap 'rm -f "$UNTICKED_KEYSTORE_PATH"' EXIT
+          umask 077
+          printf '%s' "$UNTICKED_KEYSTORE_BASE64" | base64 --decode > "$UNTICKED_KEYSTORE_PATH"
+          ./gradlew --no-daemon :app:verifyReleaseInputs :app:assembleRelease
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/unticked.apk
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose --print-certs dist/unticked.apk
+          (cd dist && sha256sum unticked.apk > SHA256SUMS)
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$RELEASE_TAG" dist/unticked.apk dist/SHA256SUMS \
+            --verify-tag --draft --title "unticked $RELEASE_TAG" --generate-notes

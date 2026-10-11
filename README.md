@@ -80,6 +80,8 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 Development and test details are in [the developer guide](docs/DEVELOPMENT.md). File conventions are documented in [interoperability](docs/INTEROPERABILITY.md).
 
+GitHub Actions build checks and a manually triggered draft APK release workflow are prepared. Signing setup and release steps are in [the release guide](docs/RELEASING.md).
+
 ## Project status and licences
 
 Handset and emulator checks are ongoing. Battery-management behaviour, accessibility, and recovery under interruption still need wider testing.
