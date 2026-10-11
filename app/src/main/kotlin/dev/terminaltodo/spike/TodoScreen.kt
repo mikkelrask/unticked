@@ -100,7 +100,10 @@ fun TodoScreen(
                             else -> "${state.tasks.count { !it.completed }} open / ${state.tasks.count { it.completed }} done"
                         }, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                     }
-                    TextButton(onClick = { settings = true }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Settings" }) { Text("···") }
+                    Box(Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).clickable(role = Role.Button) { settings = true }
+                        .semantics { contentDescription = "Settings" }, contentAlignment = Alignment.CenterEnd) {
+                        Text("···", color = colors.primary, style = MaterialTheme.typography.labelLarge, modifier = Modifier.clearAndSetSemantics { })
+                    }
                 }
                 Row(Modifier.fillMaxWidth().padding(top = if (compactHeight) 0.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     listOf("Today", "All", "Done").forEach { label ->
@@ -319,7 +322,7 @@ fun TodoScreen(
         val ink = if (task.completed) colors.secondary else colors.onSurfaceVariant
         Box(Modifier.widthIn(min = 48.dp).heightIn(min = 48.dp).toggleable(value = task.completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
             .semantics { contentDescription = (if (task.completed) "Reopen task: " else "Complete task: ") + task.description }
-            .padding(end = 4.dp, top = 2.dp), contentAlignment = Alignment.TopEnd) {
+            .padding(end = 4.dp, top = 2.dp), contentAlignment = Alignment.TopStart) {
             Text(if (task.completed) "[X]" else "[ ]", style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.clearAndSetSemantics { })
         }
         Column(Modifier.weight(1f).heightIn(min = 48.dp).clickable(onClickLabel = if (enabled) "Edit task" else "View raw task", enabled = true, onClick = onClick)) {
