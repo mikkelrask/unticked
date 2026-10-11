@@ -1,0 +1,8 @@
+
+dev.terminaltodo.spike.TodoScreenTest:.....
+
+Time: 8.36
+
+OK (5 tests)
+
+

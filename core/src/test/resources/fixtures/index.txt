@@ -1,0 +1,12 @@
+ordinary.txt
+bom-crlf.txt
+mixed-endings.txt
+no-final-newline.txt
+unicode.txt
+spacing.txt
+duplicates.txt
+ambiguous.txt
+malformed.txt
+invalid-utf8.bin
+empty.txt
+reminder.txt
