@@ -83,7 +83,7 @@ The provider test is skipped if no diagnostic document has been explicitly creat
 
 ## Validation and screenshots
 
-See [validation](docs/VALIDATION.md) and the [synthetic screenshots](docs/screenshots/). The real Syncthing edit/replacement/rename/delete checks passed on the owner's phone; its todo.txt was left unchanged.
+See [reminder validation](docs/M3_VALIDATION.md), [validation](docs/VALIDATION.md) and the [synthetic screenshots](docs/screenshots/). The real Syncthing edit/replacement/rename/delete checks passed on the owner's phone; its todo.txt was left unchanged.
 
 ## Project boundaries
 

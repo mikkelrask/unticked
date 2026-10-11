@@ -13,7 +13,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -64,7 +65,7 @@ fun TodoScreen(
             }
         }
     }
-    val compactHeight = LocalConfiguration.current.screenHeightDp < 480
+    val compactHeight = LocalWindowInfo.current.containerSize.height < 480 * LocalDensity.current.density
     val colors = MaterialTheme.colorScheme
     fun openTask(task: TaskView) {
         if (state.writable && state.draftReady && !state.saving) { editorHidden = false; onEdit(task) } else selectedRaw = task.line.text
