@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalAccessibilityManager
+import kotlinx.coroutines.delay
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -48,6 +50,16 @@ fun TodoScreen(
     var diagnosticsExpanded by rememberSaveable(settings) { mutableStateOf(false) }
     var rawDocument by rememberSaveable { mutableStateOf(false) }
     var editorHidden by rememberSaveable(state.draft?.source, state.draft?.line, state.draft?.kind) { mutableStateOf(false) }
+    var toggleDetailsRequested by rememberSaveable(state.draft?.source, state.draft?.line, state.draft?.kind) { mutableStateOf(false) }
+    var feedbackVisible by rememberSaveable(state.feedbackId, state.message) { mutableStateOf(true) }
+    val accessibility = LocalAccessibilityManager.current
+    LaunchedEffect(state.feedbackId, state.message) {
+        if (state.message != null) {
+            val timeout = accessibility?.calculateRecommendedTimeoutMillis(8000L, containsIcons = false, containsText = true, containsControls = state.canUndo) ?: 8000L
+            delay(timeout)
+            feedbackVisible = false
+        }
+    }
     var discardConfirm by rememberSaveable { mutableStateOf(false) }
     var recoveryOpen by rememberSaveable { mutableStateOf(false) }
     var selectedRaw by rememberSaveable { mutableStateOf<String?>(null) }
@@ -66,6 +78,7 @@ fun TodoScreen(
         }
     }
     val compactHeight = LocalWindowInfo.current.containerSize.height < 480 * LocalDensity.current.density
+    val retainedDraftVisible = state.draft != null && (state.draft.kind != "toggle" || !state.saving)
     val colors = MaterialTheme.colorScheme
     fun openTask(task: TaskView) {
         if (state.writable && state.draftReady && !state.saving) { editorHidden = false; onEdit(task) } else selectedRaw = task.line.text
@@ -152,11 +165,11 @@ fun TodoScreen(
             }
             Column(Modifier.padding(horizontal = 20.dp)) {
                 HorizontalDivider(color = colors.outlineVariant)
-                if (state.message != null || state.canUndo || state.draft != null || state.recovery != null) {
+                if ((feedbackVisible && state.message != null) || retainedDraftVisible || state.recovery != null) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(state.message ?: if (state.recovery != null) "save needs recovery" else "draft kept", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite }, color = colors.onSurfaceVariant)
-                        if (state.canUndo) TextButton(onClick = onUndo, enabled = !state.saving && state.draft == null) { Text("undo") }
-                        if (state.draft != null) TextButton(onClick = { editorHidden = false }) { Text("draft") }
+                        Text(if (state.recovery != null) "save needs recovery" else if (retainedDraftVisible) "draft kept" else state.message.orEmpty(), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite }, color = colors.onSurfaceVariant)
+                        if (state.canUndo && feedbackVisible) TextButton(onClick = onUndo, enabled = !state.saving && state.draft == null) { Text("undo") }
+                        if (retainedDraftVisible) TextButton(onClick = { editorHidden = false; toggleDetailsRequested = true }) { Text("draft") }
                         if (state.recovery != null) TextButton(onClick = { recoveryOpen = true }) { Text("copies") }
                     }
                 }
@@ -170,6 +183,7 @@ fun TodoScreen(
     if (settings) {
         AlertDialog(onDismissRequest = { settings = false }, title = { Text("Settings") }, confirmButton = { TextButton(onClick = { settings = false }) { Text("Close") } }, text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (state.canUndo) TextButton(onClick = { settings = false; onUndo() }, enabled = !state.saving && state.draft == null) { Text("Undo last change") }
                 TextButton(onClick = { settings = false; onOpen() }, enabled = !state.saving) { Text("Select file") }
                 Text(state.name, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 TextButton(onClick = { settings = false; onRefresh() }, enabled = !state.saving && !state.loading) { Text("Refresh tasks") }
@@ -207,7 +221,7 @@ fun TodoScreen(
         })
     }
     val draft = state.draft
-    if (draft != null && !editorHidden) {
+    if (draft != null && !editorHidden && (draft.kind != "toggle" || toggleDetailsRequested || (!state.saving && (state.draftError != null || draft.proposedHash != null)))) {
         AlertDialog(onDismissRequest = { if (!state.saving) editorHidden = true },
             title = { Text(if (draft.kind == "add") "[+] add task" else if (draft.kind == "toggle") "[ ] task change" else "[:] edit task") },
             confirmButton = { TextButton(onClick = onSave, enabled = !state.saving && draft.proposedHash == null && draft.text.isNotBlank()) { Text(if (state.saving) "saving…" else "save") } },
@@ -300,9 +314,9 @@ fun TodoScreen(
     val colors = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
         val ink = if (task.completed) colors.secondary else colors.onSurfaceVariant
-        Box(Modifier.widthIn(min = 56.dp).heightIn(min = 48.dp).toggleable(value = task.completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
+        Box(Modifier.widthIn(min = 48.dp).heightIn(min = 48.dp).toggleable(value = task.completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
             .semantics { contentDescription = (if (task.completed) "Reopen task: " else "Complete task: ") + task.description }
-            .padding(end = 12.dp, top = 2.dp)) {
+            .padding(end = 4.dp, top = 2.dp), contentAlignment = Alignment.TopEnd) {
             Text(if (task.completed) "[X]" else "[ ]", style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.clearAndSetSemantics { })
         }
         Column(Modifier.weight(1f).heightIn(min = 48.dp).clickable(onClickLabel = if (enabled) "Edit task" else "View raw task", enabled = true, onClick = onClick)) {

@@ -29,3 +29,11 @@ Evidence is in validation/2026-10-11/m3-*.txt and screenshots/unticked-*.png. On
 Handset notification delivery under OnePlus battery management, manual TalkBack and keyboard navigation, actual reboot restoration, unavailable-file notification delivery, notification channel denial, and crash/power-loss interruption remain outstanding. OS delivery is approximate and may run late. Background file discovery can run later than its nominal 15-minute interval. Android force-stop stops background work until reopening. Read/check is not an atomic transaction with an independent Syncthing writer. Attempt journaling prevents routine repeats but cannot promise exactly-once delivery across a crash. Identical lines do not receive hidden IDs and are not scheduled.
 
 References checked during implementation: [Android alarms](https://developer.android.com/develop/background-work/services/alarms), [notification permission](https://developer.android.com/develop/ui/compose/notifications/notification-permission), [JobInfo.Builder](https://developer.android.com/reference/android/app/job/JobInfo.Builder).
+
+## 0.0.6 UI and documentation refinements
+
+Normal complete/reopen saves no longer open the task-change dialog or temporary draft footer. Failed/uncertain saves and explicitly opened retained drafts still expose recovery details. Checkbox columns use 48dp touch targets with less visual spacing. Save/undo feedback expires after eight seconds, extended according to Android accessibility timeout preferences; session undo remains available in Settings. Draft/recovery controls remain persistent.
+
+15 Compose checks and the separate synthetic activity flow passed on the emulator, including pending-toggle dialog suppression, visible failure details, timed feedback expiry and retained Settings undo. Build and lint passed with zero lint issues. Screenshot: screenshots/unticked-refined-vesper.png. Phone disconnected during this pass.
+
+The root README now describes the app and getting started. Development material lives in DEVELOPMENT.md, planned work in ROADMAP.md, and the generated brief under design/.

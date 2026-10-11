@@ -1,3 +1,5 @@
+> Historical generated design input. Some proposals are not implemented. See the [README](../../README.md) for current behaviour and the [roadmap](../ROADMAP.md) for planned work.
+
 # Terminal Todo — Android project brief
 
 Version: 1.0 · 11 October 2026  

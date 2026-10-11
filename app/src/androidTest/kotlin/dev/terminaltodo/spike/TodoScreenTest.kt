@@ -128,6 +128,32 @@ class TodoScreenTest {
         compose.onNodeWithText("Create test file").assertDoesNotExist()
     }
 
+    @Test fun toggleDraftDoesNotFlashEditorButFailedSaveIsVisible() {
+        val snapshot = demoSnapshot()
+        var state by androidx.compose.runtime.mutableStateOf(TodoState(snapshot = snapshot, writable = true,
+            draft = TaskDraft("demo", snapshot, 0, snapshot.lines[0].text!!, "toggle")))
+        compose.setContent { TerminalTheme { TodoScreen(state) } }
+        compose.onNodeWithText("[ ] task change").assertDoesNotExist()
+        compose.runOnIdle { state = state.copy(saving = true) }
+        compose.onNodeWithText("[ ] task change").assertDoesNotExist()
+        compose.onNodeWithText("draft").assertDoesNotExist()
+        compose.runOnIdle { state = state.copy(saving = false, draftError = "Save failed; draft kept") }
+        compose.onNodeWithText("[ ] task change").assertIsDisplayed()
+        compose.onNodeWithText("Save failed; draft kept").assertIsDisplayed()
+    }
+    @Test fun saveFeedbackExpiresButSettingsKeepsUndo() {
+        val snapshot = demoSnapshot()
+        compose.mainClock.autoAdvance = false
+        compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, canUndo = true, message = "Saved", feedbackId = 1)) } }
+        compose.onNodeWithText("Saved").assertIsDisplayed()
+        compose.onNodeWithText("undo").assertIsDisplayed()
+        compose.mainClock.advanceTimeBy(9000)
+        compose.onNodeWithText("Saved").assertDoesNotExist()
+        compose.onNodeWithText("undo").assertDoesNotExist()
+        compose.mainClock.autoAdvance = true
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithText("Undo last change").assertIsDisplayed()
+    }
     @Test fun priorityAndClearDuePreserveOtherDraftFields() {
         val snapshot = demoSnapshot()
         var text by androidx.compose.runtime.mutableStateOf("café  +work due:2026-12-01 owner:me")

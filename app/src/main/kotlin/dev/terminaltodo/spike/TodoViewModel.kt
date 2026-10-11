@@ -27,6 +27,7 @@ enum class ThemeChoice(val label: String) { VESPER("Vesper"), DARK("Dark"), LIGH
 data class TodoState(
     val remindersEnabled: Boolean = false,
     val reminderStatus: String = "Reminders off",
+    val feedbackId: Long = 0,
     val name: String = "todo.txt",
     val snapshot: DocumentSnapshot? = null,
     val tasks: List<TaskView> = emptyList(),
@@ -208,7 +209,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                             if (!demo) withContext(Dispatchers.IO) { drafts.clear() }
                             undo = if (current.hash != proposed.hash) Triple(draft.source, current, proposed) else undo
                             mutable.value = mutable.value.copy(snapshot = proposed, tasks = proposed.lines.mapNotNull(TaskParser::parse), draft = null, draftError = null, saving = false, canUndo = undo?.first == draft.source,
-                                message = if (demo) "Sample updated" else "Saved", checked = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
+                                feedbackId = mutable.value.feedbackId + 1, message = if (demo) "Sample updated" else "Saved", checked = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
                             reconcileReminders()
                         }
                         WriteResult.Conflict -> {
@@ -245,7 +246,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     check(result is WriteResult.Verified) { if (result == WriteResult.Conflict) "The file changed. Undo stopped to preserve those changes." else "Undo could not be verified. Recovery copies are kept." }
                     undo = null
-                    mutable.value = mutable.value.copy(snapshot = saved.second, tasks = saved.second.lines.mapNotNull(TaskParser::parse), saving = false, canUndo = false, message = "Undone")
+                    mutable.value = mutable.value.copy(snapshot = saved.second, tasks = saved.second.lines.mapNotNull(TaskParser::parse), saving = false, canUndo = false, feedbackId = mutable.value.feedbackId + 1, message = "Undone")
                     reconcileReminders()
                 } catch (e: Exception) {
                     val recovery = withContext(Dispatchers.IO) { FileRecoveryJournal.recoveryText(getApplication(), saved.first) }
