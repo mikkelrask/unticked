@@ -52,3 +52,16 @@ Evidence is retained in `validation/2026-10-11/m2-*.txt`. Synthetic screenshots 
 ## Remaining milestones
 
 This is an initial explicit text editor, not the full structured-field UI. Priority/due pickers, swipe actions, keyboard refinements and reminders are still later work. There is no automatic conflict merge of an altered target, redo stack, background autosave of the shared file, archival/deletion feature, notification scheduling or release distribution.
+
+## Subsequent handset verification
+
+After the owner reconnected the OnePlus Nord 4 (Android 16), build `0.0.2-m2` was installed. A new `Documents/todo/terminal-todo-m2-handset-test.txt` was selected through the native document picker. Manual ADB touch/key input and screenshots exercised the real UI without the accessibility-disrupting UI Automator inspector.
+
+- `[ ]` completed the synthetic task with its completion date and `pri:A`; `[X]` reopened it and restored the original fixture bytes.
+- Task-body editing changed only the selected line, retaining the other task, BOM and CRLF endings.
+- `[+]` appended one task with project/due metadata and CRLF; undo removed that addition while preserving the prior edit.
+- The phone-authored edited bytes matched the Linux Syncthing counterpart.
+- The active synthetic file was removed through its verified Linux counterpart; Syncthing's own version history was left alone.
+- The real `todo.txt` was reopened, and its SHA-256 before/after this verification matched. No real task was changed by these checks.
+
+The new handset UI/write path is now checked. Full TalkBack, landscape/keyboard variations, abrupt storage faults and concurrent external-writer races remain untested.

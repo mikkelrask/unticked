@@ -1,0 +1,10 @@
+OnePlus Nord 4 CPH2663, Android 16; build 0.0.2-m2
+Synthetic native-picker document: Documents/todo/terminal-todo-m2-handset-test.txt
+Complete: exact expected bytes, BOM/CRLF/priority retained
+Reopen: original bytes restored
+Edit: only selected line changed, opaque metadata retained
+Add: one task appended with CRLF, existing bytes preserved
+Undo: appended task removed, earlier edit retained
+Phone-to-Linux Syncthing: exact byte match
+Real todo.txt: before/after SHA-256 matched; reopened through native picker
+No phone UI Automator inspection or accessibility-setting changes
