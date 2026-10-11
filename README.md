@@ -1,6 +1,6 @@
-# Terminal Todo
+# unticked
 
-A local Android client for an ordinary todo.txt file. Kotlin, Compose and a byte-preserving text core. Working name only.
+A local Android client for an ordinary todo.txt file. Kotlin, Compose and a byte-preserving text core.
 
 **Current stage: M2 task editing.** Complete/reopen, edit one task line, add a task, and undo the last local change. Opening or refreshing a file never writes to it. Reminders and structured field/date pickers remain later work.
 
@@ -34,7 +34,7 @@ Debug APK: `app/build/outputs/apk/debug/app-debug.apk`. This package and debug s
 ## Try it
 
 - The first screen shows clearly labelled synthetic tasks.
-- `file` opens Android's document picker. Choose your todo.txt. Writable UTF-8 documents enable task actions; other documents stay read-only.
+- Settings → Select file opens Android's document picker. Choose your todo.txt. Writable UTF-8 documents enable task actions; other documents stay read-only.
 - All shows incomplete tasks; Today shows overdue and due-today tasks; Done shows completed tasks.
 - Search matches raw task text, including project, context and unknown metadata tokens.
 - Tap `[ ]` to complete a task or `[X]` to reopen it. The controls have checkbox semantics and at least 48dp touch targets.
@@ -44,7 +44,7 @@ Debug APK: `app/build/outputs/apk/debug/app-debug.apk`. This package and debug s
 - `undo` reverses the last local change only when the file still matches that saved result. Undo is available for the current app session.
 - Drafts are kept privately across restarts. Back/keep draft closes the editor; discard asks explicitly. Changed/ambiguous targets block saving and keep the draft.
 - Settings also offers a raw document view; invalid UTF-8 is shown as hex, with writing disabled.
-- `refresh` re-reads the selected document; foreground return also refreshes it.
+- Pull down on the task list to refresh; Settings → Refresh tasks is the accessible alternative. Foreground return also refreshes it.
 - The filename subtitle shows total open/done counts, independent of the current search/filter.
 - Settings keeps diagnostics collapsed and offers Vesper, Dark and Light; Show sample tasks returns to synthetic data. Sample changes are in memory and reset on refresh; they never write your file.
 
@@ -86,4 +86,4 @@ See [validation](docs/VALIDATION.md) and the [synthetic screenshots](docs/screen
 - [Interoperability](docs/INTEROPERABILITY.md): portable file conventions.
 - [Original generated brief](PROJECT_BRIEF.md): retained as design input, subject to owner decisions.
 
-No remote repository or public release has been created. A project licence, final name/package, production signing and distribution remain owner decisions. Third-party font/theme notices are in `docs/notices/`.
+No remote repository or public release has been created. A project licence, production package, production signing and distribution remain owner decisions. Third-party font/theme notices are in `docs/notices/`.

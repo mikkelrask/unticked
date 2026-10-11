@@ -26,11 +26,25 @@ class TodoScreenTest {
     }
     @Test fun searchNarrowsTasksAndShowsEmptyResult() {
         render()
-        compose.onNodeWithText("Search tasks").performTextInput("coffee")
+        compose.onNodeWithTag("task-search").performTextInput("coffee")
         compose.onNodeWithText("Buy coffee").assertIsDisplayed()
         compose.onNodeWithText("Review Hermes logs").assertDoesNotExist()
-        compose.onNodeWithText("Search tasks").performTextReplacement("nothing-matches")
+        compose.onNodeWithTag("task-search").performTextReplacement("nothing-matches")
         compose.onNodeWithText("// no matching tasks").assertIsDisplayed()
+    }
+    @Test fun fileSelectionLivesInSettingsAndPullRefreshWorks() {
+        var opened = false
+        var refreshed = false
+        val snapshot = demoSnapshot()
+        compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, tasks = snapshot.lines.mapNotNull(TaskParser::parse)),
+            onOpen = { opened = true }, onRefresh = { refreshed = true }) } }
+        compose.onNodeWithText("file").assertDoesNotExist()
+        compose.onNodeWithText("refresh").assertDoesNotExist()
+        compose.onNodeWithTag("task-list").performTouchInput { swipeDown(startY = height * 0.1f, endY = height * 0.9f, durationMillis = 600) }
+        compose.runOnIdle { assertTrue("Pull refresh should call refresh", refreshed) }
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithText("Select file").performClick()
+        compose.runOnIdle { assertTrue(opened) }
     }
     @Test fun todayGroupsOverdueAndDueTodaySeparately() {
         render()

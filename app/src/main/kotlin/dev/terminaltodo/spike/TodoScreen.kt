@@ -9,6 +9,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -24,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import dev.terminaltodo.core.TaskView
 import java.time.LocalDate
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoScreen(
     state: TodoState,
@@ -74,7 +79,7 @@ fun TodoScreen(
                             else -> "${state.tasks.count { !it.completed }} open / ${state.tasks.count { it.completed }} done"
                         }, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                     }
-                    TextButton(onClick = onOpen, modifier = Modifier.heightIn(min = 48.dp)) { Text("file") }
+                    TextButton(onClick = { editorHidden = false; onAdd() }, enabled = state.writable && state.draftReady && !state.saving, modifier = Modifier.heightIn(min = 48.dp)) { Text("[+]", modifier = Modifier.semantics { contentDescription = "Add task" }) }
                     TextButton(onClick = { settings = true }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Settings" }) { Text("···") }
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -84,10 +89,19 @@ fun TodoScreen(
                         }
                     }
                 }
-                OutlinedTextField(search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 18.dp), singleLine = true,
-                    label = { Text("Search tasks") }, placeholder = { Text("description, +project, @context") },
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = colors.outlineVariant))
+                BasicTextField(search, onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("task-search").semantics { contentDescription = "Search tasks" },
+                    singleLine = true, textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.onSurface),
+                    cursorBrush = SolidColor(colors.primary),
+                    decorationBox = { input ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("/ ", color = colors.primary, style = MaterialTheme.typography.bodyMedium)
+                            Box(Modifier.weight(1f)) {
+                                if (search.isEmpty()) Text("search", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                                input()
+                            }
+                        }
+                    })
                 HorizontalDivider(color = colors.outlineVariant)
             }
             if (state.error != null) {
@@ -98,33 +112,38 @@ fun TodoScreen(
             } else if (state.loading) {
                 LinearProgressIndicator(Modifier.fillMaxWidth().padding(20.dp))
             }
-            LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp)) {
-                if (state.snapshot != null && !state.snapshot.validUtf8) {
-                    item { Text("Invalid UTF-8 · use raw view to inspect bytes", color = colors.error, modifier = Modifier.padding(vertical = 16.dp)) }
-                }
-                if (!state.loading && state.error == null && shown.isEmpty()) {
+            val listModifier = Modifier.weight(1f).fillMaxWidth().testTag("task-list")
+            PullToRefreshBox(isRefreshing = state.loading,
+                onRefresh = { if (!state.saving && !state.loading) onRefresh() },
+                modifier = listModifier) {
+                LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+                    if (state.snapshot != null && !state.snapshot.validUtf8) {
+                        item { Text("Invalid UTF-8 · use raw view to inspect bytes", color = colors.error, modifier = Modifier.padding(vertical = 16.dp)) }
+                    }
+                    if (!state.loading && state.error == null && shown.isEmpty()) {
+                        item {
+                            Text(if (search.isNotBlank()) "// no matching tasks" else if (state.tasks.isEmpty()) "// nothing queued" else "// nothing here", color = colors.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp))
+                            if (state.demo) TextButton(onClick = onOpen) { Text("Open your todo.txt") }
+                        }
+                    }
+                    if (currentTab == "Today") {
+                        val overdue = shown.filter { it.due?.isBefore(today) == true }
+                        val dueToday = shown.filter { it.due == today }
+                        if (overdue.isNotEmpty()) {
+                            item { GroupLabel("overdue", overdue.size, true) }
+                            items(overdue, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
+                        }
+                        if (dueToday.isNotEmpty()) {
+                            item { GroupLabel("due today", dueToday.size) }
+                            items(dueToday, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
+                        }
+                    } else {
+                        item { GroupLabel(if (currentTab == "Done") "completed" else "queued", shown.size) }
+                        items(shown, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
+                    }
                     item {
-                        Text(if (search.isNotBlank()) "// no matching tasks" else if (state.tasks.isEmpty()) "// nothing queued" else "// nothing here", color = colors.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp))
-                        if (state.demo) TextButton(onClick = onOpen) { Text("Open your todo.txt") }
+                        if (state.demo) Text("Synthetic tasks · in-memory", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 24.dp, bottom = 12.dp))
                     }
-                }
-                if (currentTab == "Today") {
-                    val overdue = shown.filter { it.due?.isBefore(today) == true }
-                    val dueToday = shown.filter { it.due == today }
-                    if (overdue.isNotEmpty()) {
-                        item { GroupLabel("overdue", overdue.size, true) }
-                        items(overdue, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
-                    }
-                    if (dueToday.isNotEmpty()) {
-                        item { GroupLabel("due today", dueToday.size) }
-                        items(dueToday, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
-                    }
-                } else {
-                    item { GroupLabel(if (currentTab == "Done") "completed" else "queued", shown.size) }
-                    items(shown, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
-                }
-                item {
-                    if (state.demo) Text("Synthetic tasks · in-memory", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 24.dp, bottom = 12.dp))
                 }
             }
             Column(Modifier.padding(horizontal = 20.dp)) {
@@ -137,10 +156,8 @@ fun TodoScreen(
                         if (state.recovery != null) TextButton(onClick = { recoveryOpen = true }) { Text("copies") }
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(when { state.error != null -> "file unavailable"; state.loading -> "reading…"; state.demo -> "sample buffer"; state.saving -> "saving…"; state.writable -> "local file · checked ${state.checked ?: "—"}"; else -> "read-only · checked ${state.checked ?: "—"}" }, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { editorHidden = false; onAdd() }, enabled = state.writable && state.draftReady && !state.saving, modifier = Modifier.heightIn(min = 48.dp)) { Text("[+]", modifier = Modifier.semantics { contentDescription = "Add task" }) }
-                    TextButton(onClick = onRefresh, enabled = !state.saving, modifier = Modifier.heightIn(min = 48.dp)) { Text("refresh") }
                 }
             }
         }
@@ -148,6 +165,10 @@ fun TodoScreen(
     if (settings) {
         AlertDialog(onDismissRequest = { settings = false }, title = { Text("Settings") }, confirmButton = { TextButton(onClick = { settings = false }) { Text("Close") } }, text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                TextButton(onClick = { settings = false; onOpen() }, enabled = !state.saving) { Text("Select file") }
+                Text(state.name, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                TextButton(onClick = { settings = false; onRefresh() }, enabled = !state.saving && !state.loading) { Text("Refresh tasks") }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 Text("Appearance", style = MaterialTheme.typography.titleMedium)
                 ThemeChoice.entries.forEach { choice ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onTheme(choice) }.semantics { role = Role.RadioButton; selected = state.theme == choice }, verticalAlignment = Alignment.CenterVertically) {

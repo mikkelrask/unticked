@@ -1,4 +1,4 @@
-# Terminal Todo implementation plan
+# unticked implementation plan
 
 Working title and debug-only package: `dev.terminaltodo.spike`. No production signing, remote repository, distribution, or project licence chosen.
 
@@ -36,3 +36,7 @@ Next: richer field editing (priority/due pickers with token-level patches), furt
 ## UI polish
 
 Owner requested cleaner Settings, tighter task rows, a useful filename subtitle, and existing context/project choices. Implemented collapsed diagnostics, compact accessible rows, open/done counts and draft tag suggestions. Priority/due field pickers and reminders remain next.
+
+## Terminal refinement
+
+Named unticked; launcher uses [X]. Search is an underlined / search row. File selection and an accessible refresh action live in Settings. Pull-to-refresh replaces the main refresh button; add is in the header and the idle footer is compact. Validated on emulator only while the phone is disconnected.

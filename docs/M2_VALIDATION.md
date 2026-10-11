@@ -73,3 +73,7 @@ Build `0.0.3-m2` tightens the row minimum/padding while retaining 48dp checkbox 
 Nine Compose tests plus the real-activity synthetic complete/reopen/edit/add/undo flow passed on the emulator; all ten tests ran without skips. New checks cover diagnostic disclosure and context/project insertion with duplicate exclusion. Lint remains clean. Screenshots cover the compact list/settings, tag menu, and narrow large-font editor. Task-storage/core code was unchanged by this polish.
 
 The UI polish build was installed on the handset; its real todo.txt hash matched before/after installation. Tag selection was validated on the emulator without saving changes to real handset tasks.
+
+### unticked refinement (0.0.4-m2)
+
+Emulator only: 10 Compose checks passed, including search, pull-to-refresh and Settings file selection; the synthetic complete/reopen/edit/add/undo activity flow passed separately with writes explicitly enabled. Build and lint passed. Search now uses an underline; the idle footer is compact, add lives in the header, and file selection/accessible refresh live in Settings. Launcher label is unticked with an [X] vector icon. No phone installation in this pass. Screenshot: screenshots/unticked-vesper-emulator.png.
