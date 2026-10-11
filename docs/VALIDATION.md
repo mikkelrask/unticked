@@ -1,5 +1,7 @@
 # M0 validation
 
+This records the M0 baseline. Current task actions are documented in [M2 validation](M2_VALIDATION.md).
+
 11 October 2026. M0 has a buildable project, a lossless fixture corpus, an operational storage spike tested against the owner's actual synced folder, and runnable Compose previews.
 
 ## Build and core
@@ -31,7 +33,7 @@ On the Android 17 / API 37 emulator:
 
 Only synthetic task screenshots are retained in the repository. Full TalkBack testing, landscape/keyboard coverage and notification behaviour are not claimed for this spike.
 
-## Current functional boundary
+## M0 functional boundary
 
 File selection/reselection, read-only lists, Today/All/Done views, search, raw inspection, foreground/manual refresh, persistent themes and disposable storage diagnostics are implemented. Editing, undo/conflict UI, reminder scheduling and notification actions remain later milestones.
 

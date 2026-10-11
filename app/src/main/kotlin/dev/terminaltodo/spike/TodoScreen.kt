@@ -1,7 +1,7 @@
 package dev.terminaltodo.spike
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,9 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -32,11 +29,17 @@ fun TodoScreen(
     state: TodoState,
     onOpen: () -> Unit = {}, onRefresh: () -> Unit = {}, onTheme: (ThemeChoice) -> Unit = {},
     onDemo: () -> Unit = {}, onDiagnostic: () -> Unit = {}, onClearRecovery: () -> Unit = {},
+    onComplete: (TaskView) -> Unit = {}, onEdit: (TaskView) -> Unit = {}, onAdd: () -> Unit = {},
+    onDraftText: (String) -> Unit = {}, onSave: () -> Unit = {}, onDiscard: () -> Unit = {}, onUndo: () -> Unit = {}, onExportRecovery: () -> Unit = {}, onAcknowledgeRecovery: () -> Unit = {},
+
 ) {
     var tab by rememberSaveable { mutableStateOf("All") }
     var search by rememberSaveable { mutableStateOf("") }
     var settings by rememberSaveable { mutableStateOf(false) }
     var rawDocument by rememberSaveable { mutableStateOf(false) }
+    var editorHidden by rememberSaveable(state.draft?.source, state.draft?.line, state.draft?.kind) { mutableStateOf(false) }
+    var discardConfirm by rememberSaveable { mutableStateOf(false) }
+    var recoveryOpen by rememberSaveable { mutableStateOf(false) }
     var selectedRaw by rememberSaveable { mutableStateOf<String?>(null) }
     val today = if (state.demo) LocalDate.of(2026, 10, 11) else LocalDate.now()
     val currentTab = tab // Lazy content must use the same tab snapshot as the filtered list.
@@ -51,6 +54,10 @@ fun TodoScreen(
         }
     }
     val colors = MaterialTheme.colorScheme
+    fun openTask(task: TaskView) {
+        if (state.writable && state.draftReady && !state.saving) { editorHidden = false; onEdit(task) } else selectedRaw = task.line.text
+    }
+
     Surface(color = colors.background, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
             Column(Modifier.padding(horizontal = 20.dp)) {
@@ -98,25 +105,34 @@ fun TodoScreen(
                     val dueToday = shown.filter { it.due == today }
                     if (overdue.isNotEmpty()) {
                         item { GroupLabel("overdue", overdue.size, true) }
-                        items(overdue, key = { it.line.number }) { task -> TaskRow(task, today) { selectedRaw = task.line.text } }
+                        items(overdue, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                     }
                     if (dueToday.isNotEmpty()) {
                         item { GroupLabel("due today", dueToday.size) }
-                        items(dueToday, key = { it.line.number }) { task -> TaskRow(task, today) { selectedRaw = task.line.text } }
+                        items(dueToday, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                     }
                 } else {
                     item { GroupLabel(if (currentTab == "Done") "completed" else "queued", shown.size) }
-                    items(shown, key = { it.line.number }) { task -> TaskRow(task, today) { selectedRaw = task.line.text } }
+                    items(shown, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                 }
                 item {
-                    if (state.demo) Text("Synthetic tasks · preview only", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 24.dp, bottom = 12.dp))
+                    if (state.demo) Text("Synthetic tasks · in-memory", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 24.dp, bottom = 12.dp))
                 }
             }
             Column(Modifier.padding(horizontal = 20.dp)) {
                 HorizontalDivider(color = colors.outlineVariant)
+                if (state.message != null || state.canUndo || state.draft != null || state.recovery != null) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(state.message ?: if (state.recovery != null) "save needs recovery" else "draft kept", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), color = colors.onSurfaceVariant)
+                        if (state.canUndo) TextButton(onClick = onUndo, enabled = !state.saving && state.draft == null) { Text("undo") }
+                        if (state.draft != null) TextButton(onClick = { editorHidden = false }) { Text("draft") }
+                        if (state.recovery != null) TextButton(onClick = { recoveryOpen = true }) { Text("copies") }
+                    }
+                }
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(when { state.error != null -> "file unavailable"; state.loading -> "reading…"; state.demo -> "preview · read-only"; else -> "read-only · checked ${state.checked ?: "—"}" }, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
-                    TextButton(onClick = onRefresh, modifier = Modifier.heightIn(min = 48.dp)) { Text("refresh") }
+                    Text(when { state.error != null -> "file unavailable"; state.loading -> "reading…"; state.demo -> "sample buffer"; state.saving -> "saving…"; state.writable -> "local file · checked ${state.checked ?: "—"}"; else -> "read-only · checked ${state.checked ?: "—"}" }, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { editorHidden = false; onAdd() }, enabled = state.writable && state.draftReady && !state.saving, modifier = Modifier.heightIn(min = 48.dp)) { Text("[+]", modifier = Modifier.semantics { contentDescription = "Add task" }) }
+                    TextButton(onClick = onRefresh, enabled = !state.saving, modifier = Modifier.heightIn(min = 48.dp)) { Text("refresh") }
                 }
             }
         }
@@ -135,12 +151,44 @@ fun TodoScreen(
                 TextButton(onClick = { settings = false; rawDocument = true }, enabled = state.snapshot != null) { Text("View raw document") }
                 TextButton(onClick = { settings = false; onDemo() }) { Text("Show sample tasks") }
                 Text("Storage diagnostics", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-                Text("Create a disposable file in the folder you want to test. Only that new file is written. Your selected task file stays read-only.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+                Text("Create a disposable file in the folder you want to test. Only that new file is written. The diagnostic does not write your task file.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
                 TextButton(onClick = onDiagnostic, enabled = !state.probing) { Text(if (state.probing) "Testing…" else "Create test file") }
                 state.diagnostic?.let { SelectionContainer { Text(it, style = MaterialTheme.typography.bodySmall) } }
                 TextButton(onClick = onClearRecovery, enabled = !state.probing) { Text("Clear diagnostic recovery") }
             }
         })
+    }
+    val draft = state.draft
+    if (draft != null && !editorHidden) {
+        AlertDialog(onDismissRequest = { if (!state.saving) editorHidden = true },
+            title = { Text(if (draft.kind == "add") "[+] add task" else if (draft.kind == "toggle") "[ ] task change" else "[:] edit task") },
+            confirmButton = { TextButton(onClick = onSave, enabled = !state.saving && draft.proposedHash == null && draft.text.isNotBlank()) { Text(if (state.saving) "saving…" else "save") } },
+            dismissButton = { TextButton(onClick = { discardConfirm = true }, enabled = !state.saving) { Text("discard") } },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (draft.kind == "toggle") SelectionContainer { Text(draft.text) }
+                else OutlinedTextField(draft.text, onValueChange = onDraftText, enabled = !state.saving, readOnly = draft.proposedHash != null, singleLine = true,
+                    label = { Text("Task line") }, modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodyMedium)
+                Text("Keep +projects, @contexts and key:value fields in the line.", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
+                state.draftError?.let { Text(it, color = colors.error, modifier = Modifier.padding(top = 12.dp)) }
+                TextButton(onClick = { editorHidden = true }, enabled = !state.saving) { Text("keep draft") }
+                if (state.recovery != null) TextButton(onClick = { editorHidden = true; recoveryOpen = true }) { Text("View recovery copies") }
+            } })
+    }
+    if (discardConfirm) {
+        AlertDialog(onDismissRequest = { discardConfirm = false }, title = { Text("Discard this draft?") }, text = { Text("The task file will not be changed.") },
+            confirmButton = { TextButton(onClick = { discardConfirm = false; onDiscard() }) { Text("Discard") } },
+            dismissButton = { TextButton(onClick = { discardConfirm = false }) { Text("Keep draft") } })
+    }
+    if (recoveryOpen) {
+        AlertDialog(onDismissRequest = { recoveryOpen = false }, title = { Text("Retained recovery copies") },
+            confirmButton = { TextButton(onClick = { recoveryOpen = false }) { Text("Close") } },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Showing the first 64 KiB of each copy. Export keeps the full bytes. Recover the file with another editor, then confirm it matches a retained copy.", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = onExportRecovery, enabled = !state.saving) { Text("Export full copies") }
+                TextButton(onClick = onAcknowledgeRecovery, enabled = !state.saving) { Text("Confirm recovered file") }
+                state.message?.let { Text(it, color = colors.error) }
+                SelectionContainer { Text(state.recovery ?: "No pending recovery", style = MaterialTheme.typography.bodySmall) }
+            } })
     }
     if (selectedRaw != null) {
         AlertDialog(onDismissRequest = { selectedRaw = null }, title = { Text("Raw task") }, confirmButton = { TextButton(onClick = { selectedRaw = null }) { Text("Close") } }, text = {
@@ -170,19 +218,16 @@ fun TodoScreen(
         modifier = Modifier.padding(top = 20.dp, bottom = 10.dp).semantics { heading() })
 }
 
-@Composable private fun TaskRow(task: TaskView, today: LocalDate, onClick: () -> Unit) {
+@Composable private fun TaskRow(task: TaskView, today: LocalDate, enabled: Boolean, onToggle: () -> Unit, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().heightIn(min = 88.dp).clickable(onClickLabel = "View raw task", onClick = onClick).padding(vertical = 10.dp), verticalAlignment = Alignment.Top) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 88.dp).padding(vertical = 10.dp), verticalAlignment = Alignment.Top) {
         val ink = if (task.completed) colors.secondary else colors.onSurfaceVariant
-        Canvas(Modifier.size(48.dp).semantics { role = Role.Checkbox; toggleableState = if (task.completed) androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off; disabled(); contentDescription = if (task.completed) "Completed task, read-only" else "Incomplete task, read-only" }) {
-            val left = 8.dp.toPx(); val top = 6.dp.toPx(); val box = 18.dp.toPx()
-            drawRect(ink, Offset(left, top), Size(box, box), style = Stroke(1.4.dp.toPx()))
-            if (task.completed) {
-                drawLine(ink, Offset(left + 4.dp.toPx(), top + 9.dp.toPx()), Offset(left + 8.dp.toPx(), top + 13.dp.toPx()), 1.8.dp.toPx())
-                drawLine(ink, Offset(left + 8.dp.toPx(), top + 13.dp.toPx()), Offset(left + 15.dp.toPx(), top + 5.dp.toPx()), 1.8.dp.toPx())
-            }
+        Box(Modifier.widthIn(min = 56.dp).heightIn(min = 48.dp).toggleable(value = task.completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
+            .semantics { contentDescription = (if (task.completed) "Reopen task: " else "Complete task: ") + task.description }
+            .padding(end = 12.dp, top = 2.dp)) {
+            Text(if (task.completed) "[X]" else "[ ]", style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.clearAndSetSemantics { })
         }
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).heightIn(min = 48.dp).clickable(onClickLabel = if (enabled) "Edit task" else "View raw task", enabled = true, onClick = onClick)) {
             Text((task.priority?.let { "($it) " } ?: "") + task.description, style = MaterialTheme.typography.bodyLarge,
                 color = if (task.completed) colors.onSurfaceVariant else colors.onSurface,
                 textDecoration = if (task.completed) TextDecoration.LineThrough else null)

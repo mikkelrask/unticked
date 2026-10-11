@@ -16,7 +16,7 @@ M0 builds parsed read-only views over original bytes. It retains the BOM, every 
 
 M0 parses these values but does not schedule notifications or edit fields. No IDs or companion files are required.
 
-## Proposed future mutations (not implemented in M0)
+## M2 mutations
 
 Re-read before any change and patch only the selected line/token spans. Keep physical line order. If external changes make a target ambiguous, retain the draft and ask rather than choosing a stale line number. A hash comparison is not an atomic transaction.
 
@@ -28,9 +28,9 @@ Backup workstation +maintenance remind:2026-10-14T18:00:00+02:00
 Backup workstation +maintenance remind:2026-10-15T18:00:00+02:00
 ```
 
-Proposed completion convention: prepend `x YYYY-MM-DD`, preserve the creation date/body, and store a removed active priority as unambiguous `pri:A`. Conflicting pri metadata must not be overwritten. Reopening may consume only a valid unambiguous pri value to restore the leading priority. These conventions require additional compatibility tests before M2 implements them.
+Completion convention: prepend `x YYYY-MM-DD`, preserve the creation date/body, and store a removed active priority as unambiguous `pri:A`. Conflicting pri metadata must not be overwritten. Reopening may consume only a valid unambiguous pri value to restore the leading priority. Completion/reopening compatibility tests cover whitespace, Unicode, dates, priorities and unknown fields. Ambiguous priority metadata blocks toggling and remains editable as a raw line.
 
-Example future completion/reopening, preserving unrelated metadata:
+Example completion/reopening, preserving unrelated metadata:
 
 ```text
 (A) 2026-10-11 Review logs owner:hermes
@@ -39,3 +39,7 @@ x 2026-10-12 2026-10-11 Review logs owner:hermes pri:A
 ```
 
 External sync is transport, not a transaction coordinator. Avoid independent simultaneous writes where possible; never promise that another writer cannot race a local save.
+
+M2 identifies a changed-file target only if its exact original line bytes and terminator occur once in both the original and current snapshot. If the whole snapshot is unchanged, the original physical row can distinguish duplicates. A changed/deleted/duplicated target blocks the save; it is never matched by display text alone. Stable identity cannot be guaranteed when another editor replaces one task with an indistinguishable copy.
+
+Raw editing is an explicit replacement of the selected line, not reconstruction from parsed fields. Adds reject blank/multiline/NUL input and oversized lines. Appending re-reads the latest document and retains unrelated external edits. Undo deliberately requires an exact whole-file match and never rebases. A process interruption after a save was attempted leaves an uncertain draft and requires inspection instead of repeating an append.

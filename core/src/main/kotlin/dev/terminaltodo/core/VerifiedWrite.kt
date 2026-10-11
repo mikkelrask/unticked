@@ -15,7 +15,7 @@ sealed interface WriteResult {
     data class Failed(val recordId: String?, val explanation: String) : WriteResult
 }
 
-/** M0 primitive, used only on a newly created diagnostic document. No atomicity claim. */
+/** Records recovery before truncation and verifies read-back. No shared-file atomicity claim. */
 class VerifiedWriter(private val port: DocumentPort, private val journal: RecoveryJournal) {
     @Synchronized
     fun write(base: ByteArray, proposed: ByteArray): WriteResult {

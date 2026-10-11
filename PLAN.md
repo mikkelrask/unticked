@@ -26,3 +26,9 @@ Storage safety is tested independently from sync transport. A re-read/hash compa
 ## M0 outcome
 
 Implemented and validated on the actual Android 16 handset and synced folder; see docs/VALIDATION.md and docs/STORAGE_FINDINGS.md. The live task file remains read-only. Next is completing read-only accessibility/scale checks, then M2 conservative editing.
+
+## M2 task actions (11 October 2026)
+
+Owner requested `[ ]` / `[X]` TUI controls and the next logical complete/edit/add steps while the phone is unplugged. Implemented complete/reopen, explicit single-line editing, append, conservative unique-line rebase, session undo, atomic private drafts and retained write recovery. Only the local emulator's synthetic document was mutated during this work. See docs/M2_VALIDATION.md.
+
+Next: richer field editing (priority/due pickers with token-level patches), further accessibility coverage, then M3 reminders. Install/check the new build on the handset when the owner returns. The original M0 handset installation remains unchanged until then.

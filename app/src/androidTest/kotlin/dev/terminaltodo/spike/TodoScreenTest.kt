@@ -71,4 +71,32 @@ class TodoScreenTest {
         assertFalse("width=${result.didOverflowWidth}, height=${result.didOverflowHeight}, size=${result.size}, style=${result.layoutInput.style}", result.hasVisualOverflow)
     }
 
+    @Test fun bracketCheckboxHasAccessibleToggleAndIndependentEditTarget() {
+        val snapshot = demoSnapshot()
+        var toggled = false
+        var edited = false
+        compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, tasks = snapshot.lines.mapNotNull(TaskParser::parse), writable = true),
+            onComplete = { toggled = true }, onEdit = { edited = true }) } }
+        compose.onNodeWithContentDescription("Complete task: Fix deployment script").assertIsOff().performClick()
+        assertTrue(toggled)
+        assertFalse(edited)
+        compose.onNodeWithText("(A) Fix deployment script").performClick()
+        assertTrue(edited)
+    }
+    @Test fun editableDraftOffersSaveAndExplicitDiscardConfirmation() {
+        val snapshot = demoSnapshot()
+        var saved = false
+        var discarded = false
+        compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, tasks = snapshot.lines.mapNotNull(TaskParser::parse), writable = true,
+            draft = TaskDraft("demo", snapshot, null, "A new task", "add")), onSave = { saved = true }, onDiscard = { discarded = true }) } }
+        compose.onNodeWithText("Task line").assertIsDisplayed()
+        compose.onNodeWithText("save").performClick()
+        assertTrue(saved)
+        compose.onNodeWithText("discard").performClick()
+        compose.onNodeWithText("Discard this draft?").assertIsDisplayed()
+        assertFalse(discarded)
+        compose.onNodeWithText("Discard", ignoreCase = false).performClick()
+        assertTrue(discarded)
+    }
+
 }

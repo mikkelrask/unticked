@@ -24,6 +24,9 @@ class MainActivity : ComponentActivity() {
             data.data?.let { model.acceptDocument(it, data.flags, diagnostic = true) }
         }
     }
+    private val export = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) result.data?.data?.let(model::exportRecovery)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -36,7 +39,13 @@ class MainActivity : ComponentActivity() {
                 bars.isAppearanceLightNavigationBars = state.theme == ThemeChoice.LIGHT
             }
             TerminalTheme(state.theme) {
-                TodoScreen(state, onOpen = { chooseFile() }, onRefresh = model::refresh, onTheme = model::theme, onDemo = model::showDemo, onDiagnostic = { createDiagnostic() }, onClearRecovery = model::clearRecovery)
+                TodoScreen(state, onOpen = { chooseFile() }, onRefresh = model::refresh, onTheme = model::theme, onDemo = model::showDemo, onDiagnostic = { createDiagnostic() }, onClearRecovery = model::clearRecovery, onComplete = model::complete, onEdit = model::beginEdit, onAdd = model::beginAdd, onDraftText = model::updateDraft, onSave = model::saveDraft, onDiscard = model::discardDraft, onUndo = model::undoLast, onAcknowledgeRecovery = model::acknowledgeRecovery, onExportRecovery = {
+                    export.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE); type = "application/json"
+                        putExtra(Intent.EXTRA_TITLE, "terminal-todo-recovery.json")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    })
+                })
             }
         }
     }
