@@ -39,4 +39,4 @@ Owner requested cleaner Settings, tighter task rows, a useful filename subtitle,
 
 ## Terminal refinement
 
-Named unticked; launcher uses [X]. Search is an underlined / search row. File selection and an accessible refresh action live in Settings. Pull-to-refresh replaces the main refresh button; add is in the header and the idle footer is compact. Validated on emulator only while the phone is disconnected.
+Named unticked; launcher uses [X]. Search is an underlined / search row. File selection and an accessible refresh action live in Settings. Pull-to-refresh replaces the main refresh button; add stays at the bottom-right for thumb reach, alongside the compact status line. Validated on emulator only while the phone is disconnected.

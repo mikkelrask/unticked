@@ -79,7 +79,6 @@ fun TodoScreen(
                             else -> "${state.tasks.count { !it.completed }} open / ${state.tasks.count { it.completed }} done"
                         }, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                     }
-                    TextButton(onClick = { editorHidden = false; onAdd() }, enabled = state.writable && state.draftReady && !state.saving, modifier = Modifier.heightIn(min = 48.dp)) { Text("[+]", modifier = Modifier.semantics { contentDescription = "Add task" }) }
                     TextButton(onClick = { settings = true }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Settings" }) { Text("···") }
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -156,8 +155,9 @@ fun TodoScreen(
                         if (state.recovery != null) TextButton(onClick = { recoveryOpen = true }) { Text("copies") }
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(when { state.error != null -> "file unavailable"; state.loading -> "reading…"; state.demo -> "sample buffer"; state.saving -> "saving…"; state.writable -> "local file · checked ${state.checked ?: "—"}"; else -> "read-only · checked ${state.checked ?: "—"}" }, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { editorHidden = false; onAdd() }, enabled = state.writable && state.draftReady && !state.saving, modifier = Modifier.heightIn(min = 48.dp)) { Text("[+]", modifier = Modifier.semantics { contentDescription = "Add task" }) }
                 }
             }
         }
