@@ -2,9 +2,17 @@
 
 A local Android client for an ordinary todo.txt file. Kotlin, Compose and a byte-preserving text core.
 
-**Current stage: M2 task editing.** Complete/reopen, edit one task line, add a task, and undo the last local change. Opening or refreshing a file never writes to it. Reminders and structured field/date pickers remain later work.
+**Current stage: M3 reminders and structured editing.** Complete/reopen, edit one task line, add a task, and undo the last local change. Opening or refreshing a file never writes to it. Priority, due-date and explicit reminder pickers are available. Device-local notifications are opt-in and approximate.
 
 The owner's theme choices override the generated brief: **Vesper is the default**, with standard Material dark and light alternatives. Themes persist across restarts. JetBrains Mono Regular is bundled under the SIL Open Font License.
+
+## Reminders and field pickers
+
+The editor offers priority A–Z, due-date and reminder date/time pickers. They only change the requested field; ambiguous duplicate due/remind tokens remain untouched with an explanation. Raw editing is always available. Calendar deadlines use `due:YYYY-MM-DD`; explicit reminders use `remind:YYYY-MM-DDTHH:mm:ss±HH:mm` (or Z). Ambiguous daylight-saving times require another time or a manually specified offset.
+
+Enable Reminders in Settings to request Android notification permission. Due dates alone never notify. This build uses approximate AlarmManager delivery, which can be delayed by Android battery restrictions; it does not request exact-alarm access. A persisted JobScheduler job checks the selected file roughly every 15 minutes or later, and opening, refreshing, saving and undoing reconcile it too. Synced reminders may be discovered late. Reboot/app-update receivers rebuild alarms.
+
+Before delivery the receiver reads the file again. Completed, removed, edited or duplicate tasks are suppressed. A missing file produces an explicitly unverified notice. Notifications open the app; completion and snooze actions are future enhancements. One grouped notice covers newly discovered reminders up to 24 hours late; older missed reminders appear as a count in Settings. Private atomic scheduling records retain delivery attempts for 30 days; there is no exactly-once guarantee across crashes. Switching off cancels pending alarms. Android force-stop pauses background work until the app is opened again.
 
 ## Open in Android Studio
 
@@ -86,4 +94,4 @@ See [validation](docs/VALIDATION.md) and the [synthetic screenshots](docs/screen
 - [Interoperability](docs/INTEROPERABILITY.md): portable file conventions.
 - [Original generated brief](PROJECT_BRIEF.md): retained as design input, subject to owner decisions.
 
-No remote repository or public release has been created. A project licence, production package, production signing and distribution remain owner decisions. Third-party font/theme notices are in `docs/notices/`.
+GitHub origin is configured as `https://github.com/mikkelrask/unticked.git`. No public release has been created. A project licence, production package, production signing and distribution remain owner decisions. Third-party font/theme notices are in `docs/notices/`.

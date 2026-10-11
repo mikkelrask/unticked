@@ -1,6 +1,6 @@
 # unticked implementation plan
 
-Working title and debug-only package: `dev.terminaltodo.spike`. No production signing, remote repository, distribution, or project licence chosen.
+Working title and debug-only package: `dev.terminaltodo.spike`. GitHub origin is github.com/mikkelrask/unticked.git. Production signing, distribution, and project licence remain undecided.
 
 Owner overrides (11 October 2026): repo lives in ~/Repos; existing Syncthing setup is already operational; Vesper is the default theme, with standard dark and light alternatives. The supplied LLM-generated brief is a proposal, not an independent source of authority.
 
@@ -40,3 +40,8 @@ Owner requested cleaner Settings, tighter task rows, a useful filename subtitle,
 ## Terminal refinement
 
 Named unticked; launcher uses [X]. Search is an underlined / search row. File selection and an accessible refresh action live in Settings. Pull-to-refresh replaces the main refresh button; add stays at the bottom-right for thumb reach, alongside the compact status line. Validated on emulator only while the phone is disconnected.
+
+
+## M3 first reminder build
+
+Implemented priority/due/reminder pickers preserving unrelated draft text, opt-in notification permission, approximate AlarmManager delivery, AtomicFile scheduling ledger, persisted JobScheduler reconciliation, boot/update restoration, and delivery-time file validation. Notifications open the app. Missed reminders up to 24 hours are grouped; older reminders count in Settings. Duplicate/invalid reminders are not scheduled. Exact-alarm access, local snooze, notification completion actions and optional due digest remain follow-up enhancements. Broader automated accessibility checks cover 48dp touch targets, checkbox state, independent edit targets, narrow large-text tabs and visible field ambiguity; manual handset TalkBack remains outstanding.

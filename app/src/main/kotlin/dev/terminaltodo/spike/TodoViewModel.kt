@@ -25,6 +25,8 @@ import java.time.format.DateTimeFormatter
 enum class ThemeChoice(val label: String) { VESPER("Vesper"), DARK("Dark"), LIGHT("Light") }
 
 data class TodoState(
+    val remindersEnabled: Boolean = false,
+    val reminderStatus: String = "Reminders off",
     val name: String = "todo.txt",
     val snapshot: DocumentSnapshot? = null,
     val tasks: List<TaskView> = emptyList(),
@@ -107,17 +109,26 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                 mutable.value = mutable.value.copy(name = document.name, snapshot = document.snapshot, tasks = tasks, loading = false,
                     writable = document.snapshot.validUtf8 && recovery == null && document.flags and android.provider.DocumentsContract.Document.FLAG_SUPPORTS_WRITE != 0 && getApplication<Application>().contentResolver.persistedUriPermissions.any { it.uri.toString() == selected && it.isWritePermission },
                     recovery = recovery, canUndo = undo?.first == selected, checked = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
+                reconcileReminders()
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) {
                 val recovery = withContext(Dispatchers.IO) { FileRecoveryJournal.recoveryText(getApplication(), selected) }
                 mutable.value = mutable.value.copy(loading = false, recovery = recovery, error = "File unavailable: ${e.message}. Select it again or retry.")
+                reconcileReminders()
             }
+        }
+    }
+    fun reconcileReminders() {
+        viewModelScope.launch {
+            val status = withContext(Dispatchers.IO) { runCatching { Reminders.reconcile(getApplication()) }.getOrElse { "Reminder scheduling failed: ${it.message}" } }
+            mutable.value = mutable.value.copy(remindersEnabled = Reminders.enabled(getApplication()), reminderStatus = status)
         }
     }
     fun showDemo() {
         if (mutable.value.saving) return
         readJob?.cancel()
         prefs.edit { remove("selectedUri") }
+        reconcileReminders()
         val snapshot = demoSnapshot()
         mutable.value = mutable.value.copy(name = "todo.txt", demo = true, snapshot = snapshot, tasks = snapshot.lines.mapNotNull(TaskParser::parse), loading = false, error = null, checked = null, writable = true, recovery = null, canUndo = false)
     }
@@ -198,6 +209,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                             undo = if (current.hash != proposed.hash) Triple(draft.source, current, proposed) else undo
                             mutable.value = mutable.value.copy(snapshot = proposed, tasks = proposed.lines.mapNotNull(TaskParser::parse), draft = null, draftError = null, saving = false, canUndo = undo?.first == draft.source,
                                 message = if (demo) "Sample updated" else "Saved", checked = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
+                            reconcileReminders()
                         }
                         WriteResult.Conflict -> {
                             if (!demo) withContext(Dispatchers.IO) { drafts.save(draft) }
@@ -234,6 +246,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                     check(result is WriteResult.Verified) { if (result == WriteResult.Conflict) "The file changed. Undo stopped to preserve those changes." else "Undo could not be verified. Recovery copies are kept." }
                     undo = null
                     mutable.value = mutable.value.copy(snapshot = saved.second, tasks = saved.second.lines.mapNotNull(TaskParser::parse), saving = false, canUndo = false, message = "Undone")
+                    reconcileReminders()
                 } catch (e: Exception) {
                     val recovery = withContext(Dispatchers.IO) { FileRecoveryJournal.recoveryText(getApplication(), saved.first) }
                     mutable.value = mutable.value.copy(saving = false, message = e.message, recovery = recovery, writable = mutable.value.writable && recovery == null)

@@ -1,0 +1,9 @@
+/tmp/unticked-enabled.xml: 1 file pushed, 0 skipped. 9.1 MB/s (329 bytes in 0.000s)
+/tmp/unticked-closed.txt: 1 file pushed, 0 skipped. 1.5 MB/s (59 bytes in 0.000s)
+Scheduled real AlarmManager alarm; background app killed. Waiting for notification.
+PASS: notification delivered with activity closed and app process killed; id=100
+PASS: delivery attempt persisted
+/tmp/unticked-restore.txt: 1 file pushed, 0 skipped. 2.5 MB/s (81 bytes in 0.000s)
+Warning: Activity not started, its current task has been brought to the front
+/tmp/unticked-disabled.xml: 1 file pushed, 0 skipped. 6.1 MB/s (330 bytes in 0.000s)
+Restored synthetic task file and original preferences.

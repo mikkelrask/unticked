@@ -63,9 +63,9 @@ class TodoScreenTest {
     @Test fun appearanceChoicesIncludeVesperDefault() {
         render()
         compose.onNodeWithContentDescription("Settings").performClick()
-        compose.onNodeWithText("Vesper (default)").assertIsDisplayed()
-        compose.onNodeWithText("Dark").assertIsDisplayed()
-        compose.onNodeWithText("Light").assertIsDisplayed()
+        compose.onNodeWithText("Vesper (default)").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Dark").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Light").performScrollTo().assertIsDisplayed()
     }
     @Test fun selectedTodayLabelFitsAtLargeFontOnNarrowScreen() {
         val snapshot = demoSnapshot()
@@ -128,6 +128,32 @@ class TodoScreenTest {
         compose.onNodeWithText("Create test file").assertDoesNotExist()
     }
 
+    @Test fun priorityAndClearDuePreserveOtherDraftFields() {
+        val snapshot = demoSnapshot()
+        var text by androidx.compose.runtime.mutableStateOf("café  +work due:2026-12-01 owner:me")
+        compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, writable = true,
+            draft = TaskDraft("demo", snapshot, null, text, "add")), onDraftText = { text = it }) } }
+        compose.onNodeWithText("priority").performClick()
+        compose.onNodeWithText("(B)").performClick()
+        assertEquals("(B) café  +work due:2026-12-01 owner:me", text)
+        compose.onNodeWithText("clear due").performClick()
+        assertEquals("(B) café  +work owner:me", text)
+    }
+    @Test fun ambiguousDueIsKeptAndExplained() {
+        val snapshot = demoSnapshot()
+        val text = "task due:one due:two"
+        compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, writable = true,
+            draft = TaskDraft("demo", snapshot, null, text, "add")), onDraftText = { fail("Ambiguous fields must not change") }) } }
+        compose.onNodeWithText("due date").performClick()
+        compose.onNodeWithText("Multiple due fields: edit the task line to choose which to keep").assertIsDisplayed()
+    }
+    @Test fun addAndCheckboxKeepMinimumTouchTargets() {
+        val snapshot = demoSnapshot()
+        compose.setContent { TerminalTheme { TodoScreen(TodoState(snapshot = snapshot, tasks = snapshot.lines.mapNotNull(TaskParser::parse), writable = true)) } }
+        compose.onNodeWithContentDescription("Add task").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+        compose.onNodeWithContentDescription("Complete task: Fix deployment script").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+        compose.onNodeWithContentDescription("Settings").assertHeightIsAtLeast(48.dp)
+    }
     @Test fun existingTagMenusInsertContextAndProjectWithoutDuplicates() {
         val snapshot = demoSnapshot()
         var text by androidx.compose.runtime.mutableStateOf("New task")

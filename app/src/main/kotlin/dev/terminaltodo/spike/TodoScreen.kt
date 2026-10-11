@@ -13,6 +13,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -33,6 +35,7 @@ import java.time.LocalDate
 fun TodoScreen(
     state: TodoState,
     onOpen: () -> Unit = {}, onRefresh: () -> Unit = {}, onTheme: (ThemeChoice) -> Unit = {},
+    onReminders: (Boolean) -> Unit = {}, onNotificationSettings: () -> Unit = {},
     onDemo: () -> Unit = {}, onDiagnostic: () -> Unit = {}, onClearRecovery: () -> Unit = {},
     onComplete: (TaskView) -> Unit = {}, onEdit: (TaskView) -> Unit = {}, onAdd: () -> Unit = {},
     onDraftText: (String) -> Unit = {}, onSave: () -> Unit = {}, onDiscard: () -> Unit = {}, onUndo: () -> Unit = {}, onExportRecovery: () -> Unit = {}, onAcknowledgeRecovery: () -> Unit = {},
@@ -61,6 +64,7 @@ fun TodoScreen(
             }
         }
     }
+    val compactHeight = LocalConfiguration.current.screenHeightDp < 480
     val colors = MaterialTheme.colorScheme
     fun openTask(task: TaskView) {
         if (state.writable && state.draftReady && !state.saving) { editorHidden = false; onEdit(task) } else selectedRaw = task.line.text
@@ -69,10 +73,10 @@ fun TodoScreen(
     Surface(color = colors.background, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
             Column(Modifier.padding(horizontal = 20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = if (compactHeight) 0.dp else 12.dp)) {
                     Column(Modifier.weight(1f)) {
-                        Text(state.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-                        Text(when {
+                        Text(state.name, style = if (compactHeight) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
+                        if (!compactHeight) Text(when {
                             state.loading -> "reading…"
                             state.error != null -> "file unavailable"
                             state.demo -> "sample buffer"
@@ -81,7 +85,7 @@ fun TodoScreen(
                     }
                     TextButton(onClick = { settings = true }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Settings" }) { Text("···") }
                 }
-                Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(top = if (compactHeight) 0.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     listOf("Today", "All", "Done").forEach { label ->
                         TextButton(onClick = { tab = label }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp), modifier = Modifier.weight(1f).heightIn(min = 48.dp).semantics { selected = tab == label }, colors = ButtonDefaults.textButtonColors(contentColor = if (tab == label) colors.primary else colors.onSurfaceVariant)) {
                             Text(label, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1, softWrap = false)
@@ -93,7 +97,7 @@ fun TodoScreen(
                     singleLine = true, textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.onSurface),
                     cursorBrush = SolidColor(colors.primary),
                     decorationBox = { input ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = if (compactHeight) 4.dp else 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("/ ", color = colors.primary, style = MaterialTheme.typography.bodyMedium)
                             Box(Modifier.weight(1f)) {
                                 if (search.isEmpty()) Text("search", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
@@ -129,15 +133,15 @@ fun TodoScreen(
                         val overdue = shown.filter { it.due?.isBefore(today) == true }
                         val dueToday = shown.filter { it.due == today }
                         if (overdue.isNotEmpty()) {
-                            item { GroupLabel("overdue", overdue.size, true) }
+                            item { GroupLabel("overdue", overdue.size, true, compactHeight) }
                             items(overdue, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                         }
                         if (dueToday.isNotEmpty()) {
-                            item { GroupLabel("due today", dueToday.size) }
+                            item { GroupLabel("due today", dueToday.size, compact = compactHeight) }
                             items(dueToday, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                         }
                     } else {
-                        item { GroupLabel(if (currentTab == "Done") "completed" else "queued", shown.size) }
+                        item { GroupLabel(if (currentTab == "Done") "completed" else "queued", shown.size, compact = compactHeight) }
                         items(shown, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                     }
                     item {
@@ -149,7 +153,7 @@ fun TodoScreen(
                 HorizontalDivider(color = colors.outlineVariant)
                 if (state.message != null || state.canUndo || state.draft != null || state.recovery != null) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(state.message ?: if (state.recovery != null) "save needs recovery" else "draft kept", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), color = colors.onSurfaceVariant)
+                        Text(state.message ?: if (state.recovery != null) "save needs recovery" else "draft kept", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite }, color = colors.onSurfaceVariant)
                         if (state.canUndo) TextButton(onClick = onUndo, enabled = !state.saving && state.draft == null) { Text("undo") }
                         if (state.draft != null) TextButton(onClick = { editorHidden = false }) { Text("draft") }
                         if (state.recovery != null) TextButton(onClick = { recoveryOpen = true }) { Text("copies") }
@@ -168,6 +172,14 @@ fun TodoScreen(
                 TextButton(onClick = { settings = false; onOpen() }, enabled = !state.saving) { Text("Select file") }
                 Text(state.name, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 TextButton(onClick = { settings = false; onRefresh() }, enabled = !state.saving && !state.loading) { Text("Refresh tasks") }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Reminders", modifier = Modifier.weight(1f))
+                    Switch(checked = state.remindersEnabled, onCheckedChange = onReminders, modifier = Modifier.semantics { contentDescription = "Enable reminders" })
+                }
+                Text(state.reminderStatus, style = MaterialTheme.typography.bodySmall)
+                Text(if (state.remindersEnabled) "Only remind: timestamps notify. Delivery may be delayed. Synced changes are checked periodically, when opening, and before delivery." else "Enable notifications for explicit remind: times.", style = MaterialTheme.typography.bodySmall)
+                if (state.remindersEnabled) TextButton(onClick = onNotificationSettings) { Text("Notification settings") }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 Text("Appearance", style = MaterialTheme.typography.titleMedium)
                 ThemeChoice.entries.forEach { choice ->
@@ -204,6 +216,7 @@ fun TodoScreen(
                 else OutlinedTextField(draft.text, onValueChange = onDraftText, enabled = !state.saving, readOnly = draft.proposedHash != null, singleLine = true,
                     label = { Text("Task line") }, modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodyMedium)
                 if (draft.kind != "toggle") {
+                    TaskFieldPickers(draft.text, !state.saving && draft.proposedHash == null, onDraftText)
                     FlowRow(Modifier.fillMaxWidth().padding(top = 4.dp)) {
                         ExistingTagMenu("@context", existingContexts, draft.text, !state.saving && draft.proposedHash == null, onDraftText)
                         ExistingTagMenu("+project", existingProjects, draft.text, !state.saving && draft.proposedHash == null, onDraftText)
@@ -276,10 +289,10 @@ fun TodoScreen(
     }
 }
 
-@Composable private fun GroupLabel(label: String, count: Int, alert: Boolean = false) {
+@Composable private fun GroupLabel(label: String, count: Int, alert: Boolean = false, compact: Boolean = false) {
     Text("// $label · $count ${if (count == 1) "task" else "tasks"}", style = MaterialTheme.typography.bodySmall,
         color = if (alert) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 20.dp, bottom = 10.dp).semantics { heading() })
+        modifier = Modifier.padding(top = if (compact) 4.dp else 20.dp, bottom = if (compact) 4.dp else 10.dp).semantics { heading() })
 }
 
 @Composable private fun TaskRow(task: TaskView, today: LocalDate, enabled: Boolean, onToggle: () -> Unit, onClick: () -> Unit) {
