@@ -1,4 +1,4 @@
-package dev.terminaltodo.spike
+package xyz.raske.unticked
 
 import android.app.Activity
 import android.content.Intent

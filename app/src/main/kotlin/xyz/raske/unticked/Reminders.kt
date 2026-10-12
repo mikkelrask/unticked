@@ -1,4 +1,4 @@
-package dev.terminaltodo.spike
+package xyz.raske.unticked
 
 import android.Manifest
 import android.app.*
@@ -124,7 +124,7 @@ object Reminders {
     private fun notify(context: Context, id: Int, title: String, text: String) {
         val open = PendingIntent.getActivity(context, id, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         context.getSystemService(NotificationManager::class.java).notify(id,
-            Notification.Builder(context, CHANNEL).setSmallIcon(dev.terminaltodo.spike.R.drawable.ic_terminal)
+            Notification.Builder(context, CHANNEL).setSmallIcon(xyz.raske.unticked.R.drawable.ic_terminal)
                 .setContentTitle(title).setContentText(text).setStyle(Notification.BigTextStyle().bigText(text))
                 .setContentIntent(open).setAutoCancel(true).setOnlyAlertOnce(true).build())
     }

@@ -1,4 +1,4 @@
-package dev.terminaltodo.spike
+package xyz.raske.unticked
 
 import android.content.Context
 import android.util.AtomicFile

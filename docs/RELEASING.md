@@ -9,7 +9,7 @@ GitHub Actions workflows are prepared for GitHub Releases and Obtainium. They do
 ## Before the first release
 
 - Finish handset testing and choose a project licence.
-- Decide the permanent application ID. The current development ID is `dev.terminaltodo.spike`; changing it creates a separate installed app.
+- The permanent application ID is `xyz.raske.unticked`. It replaces the development ID `dev.terminaltodo.spike` and installs as a separate app; select your existing todo.txt again. Keep this ID stable for future releases.
 - Create a private release keystore and keep a backed-up copy outside the repository. Keep the same signing identity for subsequent APK updates.
 - Add these repository Actions secrets:
   - `UNTICKED_KEYSTORE_BASE64`: base64-encoded keystore contents.

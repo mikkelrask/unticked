@@ -1,4 +1,4 @@
-package dev.terminaltodo.spike
+package xyz.raske.unticked
 
 import android.app.NotificationManager
 import android.content.Context

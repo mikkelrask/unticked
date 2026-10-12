@@ -1,4 +1,4 @@
-package dev.terminaltodo.spike
+package xyz.raske.unticked
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable

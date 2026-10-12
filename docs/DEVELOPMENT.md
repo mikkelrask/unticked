@@ -32,7 +32,7 @@ The wrapper pins Gradle and verifies its distribution checksum. Dependencies and
 
 ```sh
 "$ANDROID_HOME/platform-tools/adb" install -r app/build/outputs/apk/debug/app-debug.apk
-"$ANDROID_HOME/platform-tools/adb" shell am start -n dev.terminaltodo.spike/.MainActivity
+"$ANDROID_HOME/platform-tools/adb" shell am start -n xyz.raske.unticked/.MainActivity
 ```
 
 Debug APK: `app/build/outputs/apk/debug/app-debug.apk`. This package and debug signing are temporary development identities.
@@ -75,7 +75,7 @@ The phone must be unlocked. First create a disposable diagnostic document throug
 
 ```sh
 ./gradlew :app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=dev.terminaltodo.spike.StorageProbeTest,dev.terminaltodo.spike.TodoScreenTest
+  -Pandroid.testInstrumentationRunnerArguments.class=xyz.raske.unticked.StorageProbeTest,xyz.raske.unticked.TodoScreenTest
 ```
 
 The provider test is skipped if no diagnostic document has been explicitly created. The external-change test runs separately with a known synthetic expected string; see the provider findings for commands. Write integration tests are opt-in and require the disposable emulator document named `terminal-todo-m2-test.txt`, a persisted read/write grant, and `-e enableM2Writes true`. Never run them on your working task file. See [M2 validation](M2_VALIDATION.md) for the exact checks.

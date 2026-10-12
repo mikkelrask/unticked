@@ -8,11 +8,11 @@ if (releaseSigning.values().any { it != null } && !hasReleaseSigning) {
     throw new GradleException('Release signing requires all four UNTICKED_KEYSTORE_* / UNTICKED_KEY_* variables.')
 }
 android {
-    namespace = 'dev.terminaltodo.spike'
+    namespace = 'xyz.raske.unticked'
     compileSdk = 37
     buildToolsVersion = '37.0.0'
     defaultConfig {
-        applicationId = 'dev.terminaltodo.spike'
+        applicationId = 'xyz.raske.unticked'
         minSdk = 26
         targetSdk = 37
         versionCode = 10

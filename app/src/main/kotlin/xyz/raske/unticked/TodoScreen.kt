@@ -1,4 +1,4 @@
-package dev.terminaltodo.spike
+package xyz.raske.unticked
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable

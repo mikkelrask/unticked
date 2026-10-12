@@ -1,4 +1,4 @@
-package dev.terminaltodo.spike
+package xyz.raske.unticked
 
 import androidx.compose.ui.test.*
 import androidx.compose.runtime.getValue
