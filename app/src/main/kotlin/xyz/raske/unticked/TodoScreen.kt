@@ -1,5 +1,13 @@
 package xyz.raske.unticked
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
@@ -12,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
@@ -43,7 +52,8 @@ fun TodoScreen(
     onOpen: () -> Unit = {}, onRefresh: () -> Unit = {}, onTheme: (ThemeChoice) -> Unit = {},
     onReminders: (Boolean) -> Unit = {}, onNotificationSettings: () -> Unit = {},
     onDemo: () -> Unit = {}, onDiagnostic: () -> Unit = {}, onClearRecovery: () -> Unit = {},
-    onComplete: (TaskView) -> Unit = {}, onEdit: (TaskView) -> Unit = {}, onAdd: () -> Unit = {},
+    onComplete: (TaskView) -> Unit = {}, onDelete: (TaskView) -> Unit = {},
+    onSwipeAction: (Boolean, SwipeAction) -> Unit = { _, _ -> }, onEdit: (TaskView) -> Unit = {}, onAdd: () -> Unit = {},
     onDraftText: (String) -> Unit = {}, onSave: () -> Unit = {}, onDiscard: () -> Unit = {}, onUndo: () -> Unit = {}, onExportRecovery: () -> Unit = {}, onAcknowledgeRecovery: () -> Unit = {},
 
 ) {
@@ -81,7 +91,7 @@ fun TodoScreen(
         }
     }
     val compactHeight = LocalWindowInfo.current.containerSize.height < 480 * LocalDensity.current.density
-    val retainedDraftVisible = state.draft != null && (state.draft.kind != "toggle" || !state.saving)
+    val retainedDraftVisible = state.draft != null && (state.draft.kind !in setOf("toggle", "delete") || !state.saving)
     val colors = MaterialTheme.colorScheme
     fun openTask(task: TaskView) {
         if (state.writable && state.draftReady && !state.saving) { editorHidden = false; onEdit(task) } else selectedRaw = task.line.text
@@ -154,15 +164,15 @@ fun TodoScreen(
                         val dueToday = shown.filter { it.due == today }
                         if (overdue.isNotEmpty()) {
                             item { GroupLabel("overdue", overdue.size, true, compactHeight) }
-                            items(overdue, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
+                            items(overdue, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving && state.draft == null, swipeLeft = state.swipeLeft, swipeRight = state.swipeRight, onDelete = { editorHidden = false; onDelete(task) }, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                         }
                         if (dueToday.isNotEmpty()) {
                             item { GroupLabel("due today", dueToday.size, compact = compactHeight) }
-                            items(dueToday, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
+                            items(dueToday, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving && state.draft == null, swipeLeft = state.swipeLeft, swipeRight = state.swipeRight, onDelete = { editorHidden = false; onDelete(task) }, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                         }
                     } else {
                         item { GroupLabel(if (currentTab == "Done") "completed" else "queued", shown.size, compact = compactHeight) }
-                        items(shown, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
+                        items(shown, key = { it.line.number }) { task -> TaskRow(task, today, enabled = state.writable && state.draftReady && !state.saving && state.draft == null, swipeLeft = state.swipeLeft, swipeRight = state.swipeRight, onDelete = { editorHidden = false; onDelete(task) }, onToggle = { editorHidden = false; onComplete(task) }) { openTask(task) } }
                     }
                     item {
                         if (state.demo) Text("Synthetic tasks · in-memory", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 24.dp, bottom = 12.dp))
@@ -202,6 +212,11 @@ fun TodoScreen(
                 Text(if (state.remindersEnabled) "Only remind: timestamps notify. Delivery may be delayed. Synced changes are checked periodically, when opening, and before delivery." else "Enable notifications for explicit remind: times.", style = MaterialTheme.typography.bodySmall)
                 if (state.remindersEnabled) TextButton(onClick = onNotificationSettings) { Text("Notification settings") }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Text("Swipe actions", style = MaterialTheme.typography.bodyMedium)
+                SwipeActionMenu("← Swipe left", state.swipeLeft) { onSwipeAction(true, it) }
+                SwipeActionMenu("→ Swipe right", state.swipeRight) { onSwipeAction(false, it) }
+                Text("Delete removes the whole task line. Undo restores it.", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 Text("Appearance", style = MaterialTheme.typography.titleMedium)
                 ThemeChoice.entries.forEach { choice ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onTheme(choice) }.semantics { role = Role.RadioButton; selected = state.theme == choice }, verticalAlignment = Alignment.CenterVertically) {
@@ -227,23 +242,23 @@ fun TodoScreen(
         })
     }
     val draft = state.draft
-    if (draft != null && !editorHidden && (draft.kind != "toggle" || toggleDetailsRequested || (!state.saving && (state.draftError != null || draft.proposedHash != null)))) {
+    if (draft != null && !editorHidden && (draft.kind !in setOf("toggle", "delete") || toggleDetailsRequested || (!state.saving && (state.draftError != null || draft.proposedHash != null)))) {
         AlertDialog(onDismissRequest = { if (!state.saving) editorHidden = true },
-            title = { Text(if (draft.kind == "add") "[+] add task" else if (draft.kind == "toggle") "[ ] task change" else "[:] edit task") },
-            confirmButton = { TextButton(onClick = onSave, enabled = !state.saving && draft.proposedHash == null && draft.text.isNotBlank()) { Text(if (state.saving) "saving…" else "save") } },
+            title = { Text(if (draft.kind == "add") "[+] add task" else if (draft.kind == "delete") "[-] delete task" else if (draft.kind == "toggle") "[ ] task change" else "[:] edit task") },
+            confirmButton = { TextButton(onClick = onSave, enabled = !state.saving && draft.proposedHash == null && draft.text.isNotBlank()) { Text(if (state.saving) "saving…" else if (draft.kind == "delete") "delete" else "save") } },
             dismissButton = { TextButton(onClick = { discardConfirm = true }, enabled = !state.saving) { Text("discard") } },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) {
-                if (draft.kind == "toggle") SelectionContainer { Text(draft.text) }
+                if (draft.kind in setOf("toggle", "delete")) SelectionContainer { Text(draft.text) }
                 else OutlinedTextField(draft.text, onValueChange = onDraftText, enabled = !state.saving, readOnly = draft.proposedHash != null, singleLine = true,
                     label = { Text("Task line") }, modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodyMedium)
-                if (draft.kind != "toggle") {
+                if (draft.kind !in setOf("toggle", "delete")) {
                     TaskFieldPickers(draft.text, !state.saving && draft.proposedHash == null, onDraftText)
                     FlowRow(Modifier.fillMaxWidth().padding(top = 4.dp)) {
                         ExistingTagMenu("@context", existingContexts, draft.text, !state.saving && draft.proposedHash == null, onDraftText)
                         ExistingTagMenu("+project", existingProjects, draft.text, !state.saving && draft.proposedHash == null, onDraftText)
                     }
                 }
-                Text("Keep +projects, @contexts and key:value fields in the line.", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
+                Text(if (draft.kind == "delete") "Remove this task line from the file. Undo is available after a verified save." else "Keep +projects, @contexts and key:value fields in the line.", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
                 state.draftError?.let { Text(it, color = colors.error, modifier = Modifier.padding(top = 12.dp)) }
                 TextButton(onClick = { editorHidden = true }, enabled = !state.saving) { Text("keep draft") }
                 if (state.recovery != null) TextButton(onClick = { editorHidden = true; recoveryOpen = true }) { Text("View recovery copies") }
@@ -316,7 +331,79 @@ fun TodoScreen(
         modifier = Modifier.padding(top = if (compact) 4.dp else 20.dp, bottom = if (compact) 4.dp else 10.dp).semantics { heading() })
 }
 
-@Composable private fun TaskRow(task: TaskView, today: LocalDate, enabled: Boolean, onToggle: () -> Unit, onClick: () -> Unit) {
+@Composable private fun SwipeActionMenu(label: String, action: SwipeAction, onSelect: (SwipeAction) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { expanded = true }) { Text("$label: ${action.label}") }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            SwipeAction.entries.forEach { choice ->
+                DropdownMenuItem(text = { Text(choice.label) }, onClick = { expanded = false; onSelect(choice) },
+                    modifier = Modifier.semantics { selected = choice == action })
+            }
+        }
+    }
+}
+
+@Composable private fun TaskRow(task: TaskView, today: LocalDate, enabled: Boolean,
+    swipeLeft: SwipeAction, swipeRight: SwipeAction, onDelete: () -> Unit, onToggle: () -> Unit, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    var drag by remember(task.line, swipeLeft, swipeRight, enabled) { mutableFloatStateOf(0f) }
+    var dragging by remember(task.line, swipeLeft, swipeRight, enabled) { mutableStateOf(false) }
+    val offset by animateFloatAsState(if (dragging) drag else 0f, animationSpec = if (dragging) snap() else spring(), label = "Task swipe")
+    val density = LocalDensity.current
+    val threshold = with(density) { 96.dp.toPx() }
+    val limit = with(density) { 160.dp.toPx() }
+    fun label(action: SwipeAction) = when (action) {
+        SwipeAction.NONE -> ""
+        SwipeAction.COMPLETE -> if (task.completed) "[ ] reopen" else "[X] complete"
+        SwipeAction.DELETE -> "[-] delete"
+    }
+    fun perform(action: SwipeAction) { when (action) {
+        SwipeAction.NONE -> Unit
+        SwipeAction.COMPLETE -> onToggle()
+        SwipeAction.DELETE -> onDelete()
+    } }
+    val gesture = if (enabled && (swipeLeft != SwipeAction.NONE || swipeRight != SwipeAction.NONE)) {
+        Modifier.pointerInput(task.line, swipeLeft, swipeRight) {
+            detectHorizontalDragGestures(
+                onDragStart = { dragging = true },
+                onDragCancel = { dragging = false; drag = 0f },
+                onDragEnd = {
+                    val action = if (drag < 0f) swipeLeft else swipeRight
+                    val committed = abs(drag) >= threshold
+                    dragging = false; drag = 0f
+                    if (committed) perform(action)
+                },
+                onHorizontalDrag = { change, amount ->
+                    change.consume()
+                    val proposed = (drag + amount).coerceIn(-limit, limit)
+                    drag = if ((proposed < 0f && swipeLeft == SwipeAction.NONE) || (proposed > 0f && swipeRight == SwipeAction.NONE)) 0f else proposed
+                }
+            )
+        }
+    } else Modifier
+    Column {
+        Box(Modifier.fillMaxWidth().clipToBounds().testTag("task-row-${task.line.number}").then(gesture).semantics {
+            if (enabled) customActions = listOf(
+                CustomAccessibilityAction(if (task.completed) "Reopen task" else "Complete task") { onToggle(); true },
+                CustomAccessibilityAction("Delete task") { onDelete(); true }
+            )
+        }) {
+            if (offset != 0f) {
+                val action = if (offset < 0f) swipeLeft else swipeRight
+                Text(label(action), style = MaterialTheme.typography.bodyMedium,
+                    color = if (action == SwipeAction.DELETE) colors.error else colors.secondary,
+                    modifier = Modifier.align(if (offset < 0f) Alignment.CenterEnd else Alignment.CenterStart).clearAndSetSemantics { })
+            }
+            Box(Modifier.offset { IntOffset(offset.roundToInt(), 0) }) {
+                Surface(color = colors.background) { TaskRowContent(task, today, enabled, onToggle, onClick) }
+            }
+        }
+        HorizontalDivider(color = colors.outlineVariant)
+    }
+}
+
+@Composable private fun TaskRowContent(task: TaskView, today: LocalDate, enabled: Boolean, onToggle: () -> Unit, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
         val ink = if (task.completed) colors.secondary else colors.onSurfaceVariant
@@ -348,7 +435,6 @@ fun TodoScreen(
             if (task.issues.isNotEmpty()) Text(task.issues.joinToString(" · "), color = colors.error, style = MaterialTheme.typography.bodySmall)
         }
     }
-    HorizontalDivider(color = colors.outlineVariant)
 }
 
 @Preview(name = "Vesper · default", showBackground = true, widthDp = 390, heightDp = 844)

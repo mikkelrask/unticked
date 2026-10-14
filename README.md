@@ -6,6 +6,7 @@ A terminal-inspired Android app for your todo.txt. Plain text, bracket checkboxe
 
 - Complete and reopen tasks with `[ ]` and `[X]`.
 - Add tasks and edit their original text.
+- Swipe task rows to complete/reopen or delete; configure each direction in Settings.
 - Pick priorities, due dates, and explicit reminder times.
 - Recur tasks using plain-text `rec:` fields.
 - Select between existing `@contexts` and `+projects`.
@@ -24,6 +25,8 @@ unticked is currently an early development build. There is no signed release APK
 2. Tap a checkbox to complete or reopen a task; tap its text to edit.
 3. Use `[+]` at the bottom to add a task.
 4. Pull down to refresh after changes from another device.
+
+Swipe right completes or reopens a task; swipe left deletes its whole line. Settings → Swipe actions lets you choose Complete / reopen, Delete or Off independently for each direction. Short or cancelled swipes leave the task unchanged. Undo restores a deletion, and the same actions are available to accessibility services.
 
 The sample tasks shown before selecting a file are disposable and stay in memory.
 

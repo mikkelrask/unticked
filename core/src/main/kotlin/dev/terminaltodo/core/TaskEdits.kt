@@ -22,6 +22,11 @@ object TaskEdits {
         validateLine(text)
         return current.patch(resolve(base, current, lineNumber).span, text)
     }
+    fun delete(base: DocumentSnapshot, current: DocumentSnapshot, lineNumber: Int): DocumentSnapshot {
+        val line = resolve(base, current, lineNumber)
+        require(TaskParser.parse(line) != null) { "This line is not a task" }
+        return current.patch(ByteSpan(line.span.start, line.terminator.end), "")
+    }
     fun append(current: DocumentSnapshot, text: String): DocumentSnapshot {
         validateLine(text)
         require(current.validUtf8) { "Invalid UTF-8: writing is disabled" }

@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
                         notifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                 }, onNotificationSettings = {
                     startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName))
-                }, onOpen = { chooseFile() }, onRefresh = model::refresh, onTheme = model::theme, onDemo = model::showDemo, onDiagnostic = { createDiagnostic() }, onClearRecovery = model::clearRecovery, onComplete = model::complete, onEdit = model::beginEdit, onAdd = model::beginAdd, onDraftText = model::updateDraft, onSave = model::saveDraft, onDiscard = model::discardDraft, onUndo = model::undoLast, onAcknowledgeRecovery = model::acknowledgeRecovery, onExportRecovery = {
+                }, onOpen = { chooseFile() }, onRefresh = model::refresh, onTheme = model::theme, onDemo = model::showDemo, onDiagnostic = { createDiagnostic() }, onClearRecovery = model::clearRecovery, onComplete = model::complete, onDelete = model::delete, onSwipeAction = model::swipeAction, onEdit = model::beginEdit, onAdd = model::beginAdd, onDraftText = model::updateDraft, onSave = model::saveDraft, onDiscard = model::discardDraft, onUndo = model::undoLast, onAcknowledgeRecovery = model::acknowledgeRecovery, onExportRecovery = {
                     export.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                         addCategory(Intent.CATEGORY_OPENABLE); type = "application/json"
                         putExtra(Intent.EXTRA_TITLE, "terminal-todo-recovery.json")

@@ -24,7 +24,11 @@ import java.time.format.DateTimeFormatter
 
 enum class ThemeChoice(val label: String) { VESPER("Vesper"), DARK("Dark"), LIGHT("Light") }
 
+enum class SwipeAction(val label: String) { NONE("Off"), COMPLETE("Complete / reopen"), DELETE("Delete") }
+
 data class TodoState(
+    val swipeLeft: SwipeAction = SwipeAction.DELETE,
+    val swipeRight: SwipeAction = SwipeAction.COMPLETE,
     val remindersEnabled: Boolean = false,
     val reminderStatus: String = "Reminders off",
     val feedbackId: Long = 0,
@@ -62,7 +66,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("settings", Context.MODE_PRIVATE)
     private val store = DocumentStore(application)
     private val initialTheme = runCatching { ThemeChoice.valueOf(prefs.getString("theme", "VESPER")!!) }.getOrDefault(ThemeChoice.VESPER)
-    private val mutable = MutableStateFlow(TodoState(draftReady = false, theme = initialTheme, diagnostic = prefs.getString("diagnosticReport", null)))
+    private val mutable = MutableStateFlow(TodoState(draftReady = false, theme = initialTheme, swipeLeft = savedSwipe("swipeLeft", SwipeAction.DELETE), swipeRight = savedSwipe("swipeRight", SwipeAction.COMPLETE), diagnostic = prefs.getString("diagnosticReport", null)))
     val state = mutable.asStateFlow()
     private var readJob: Job? = null
     private val drafts = DraftStore(application)
@@ -76,6 +80,18 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                 mutable.value = mutable.value.copy(draftReady = true, draft = draft, draftError = if (draft?.proposedHash != null) "A previous save may have finished. Inspect the file before discarding this retained draft." else null)
             } catch (e: Exception) { mutable.value = mutable.value.copy(error = "The retained draft could not be opened: ${e.message}. Its private copy has been kept.", writable = false) }
         }
+    }
+    private fun savedSwipe(key: String, fallback: SwipeAction): SwipeAction =
+        runCatching { SwipeAction.valueOf(prefs.getString(key, fallback.name)!!) }.getOrDefault(fallback)
+    fun swipeAction(left: Boolean, action: SwipeAction) {
+        prefs.edit { putString(if (left) "swipeLeft" else "swipeRight", action.name) }
+        mutable.value = if (left) mutable.value.copy(swipeLeft = action) else mutable.value.copy(swipeRight = action)
+    }
+    fun delete(task: TaskView) {
+        if (!currentTask(task)) return
+        if (mutable.value.draft != null) { mutable.value = mutable.value.copy(draftError = "Finish or discard the current draft first."); return }
+        beginDraft(task.line.number, "delete", task.line.text.orEmpty())
+        saveDraft()
     }
     fun theme(choice: ThemeChoice) {
         prefs.edit { putString("theme", choice.name) }
@@ -196,6 +212,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                         val current = if (demo) mutable.value.snapshot ?: error("Sample unavailable") else store.open(draft.source.toUri()).snapshot
                         val proposed = when (draft.kind) {
                             "toggle" -> TaskEdits.toggle(draft.base, current, draft.line!!, LocalDate.now())
+                            "delete" -> TaskEdits.delete(draft.base, current, draft.line!!)
                             "add" -> TaskEdits.append(current, draft.text)
                             else -> TaskEdits.replace(draft.base, current, draft.line!!, draft.text)
                         }
@@ -209,7 +226,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                             if (!demo) withContext(Dispatchers.IO) { drafts.clear() }
                             undo = if (current.hash != proposed.hash) Triple(draft.source, current, proposed) else undo
                             mutable.value = mutable.value.copy(snapshot = proposed, tasks = proposed.lines.mapNotNull(TaskParser::parse), draft = null, draftError = null, saving = false, canUndo = undo?.first == draft.source,
-                                feedbackId = mutable.value.feedbackId + 1, message = if (demo) "Sample updated" else "Saved", checked = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
+                                feedbackId = mutable.value.feedbackId + 1, message = if (draft.kind == "delete") "Deleted" else if (demo) "Sample updated" else "Saved", checked = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
                             reconcileReminders()
                         }
                         WriteResult.Conflict -> {
