@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101010">
+  <meta name="description" content="unticked — a small Android app for your todo.txt.">
+  <title>unticked</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/jetbrains-mono.ttf") format("truetype"); font-display: swap; }
+    :root { color-scheme: dark; background: #101010; color: #ddd; font-family: "JetBrains Mono", monospace; font-size: 15px; line-height: 1.7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 690px; margin: 0 auto; padding: 64px 24px 32px; }
+    h1 { margin: 0 0 20px; font-size: 1.4rem; font-weight: 400; }
+    h1 span { color: #99ffe4; }
+    p { margin: 0 0 12px; }
+    a { color: #ffc799; text-underline-offset: .25em; text-decoration-thickness: 1px; }
+    a:hover { color: #fff; }
+    a:focus-visible { outline: 2px solid #99ffe4; outline-offset: 5px; }
+    nav { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 24px; }
+    figure { margin: 40px 0 32px; }
+    img { display: block; width: 270px; max-width: 100%; height: auto; }
+    figcaption, footer { color: #a0a0a0; font-size: .85rem; }
+    figcaption { margin-top: 12px; }
+    footer { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+    @media (max-width: 480px) { main { padding-top: 32px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1><span aria-hidden="true">[X]</span> unticked</h1>
+    <p>A small Android app for your <a href="https://github.com/todotxt/todo.txt">todo.txt</a>.</p>
+    <p>Your tasks live in a plain text file.</p>
+    <nav aria-label="Project links">
+      <a href="https://github.com/mikkelrask/unticked/releases/latest/download/unticked.apk">APK</a>
+      <a href="https://github.com/mikkelrask/unticked">Source</a>
+      <a href="https://github.com/mikkelrask/unticked/releases">Releases</a>
+    </nav>
+    <figure>
+      <img src="assets/unticked.png" width="1080" height="2400" alt="unticked in the Vesper theme, showing example tasks with bracket checkboxes, projects and contexts.">
+      <figcaption>Vesper theme. Example tasks.</figcaption>
+    </figure>
+    <footer>
+      <span>Android 8.0+</span>
+      <a href="https://github.com/mikkelrask/unticked/blob/main/LICENSE">MIT licence</a>
+      <a href="https://mikkelrask.dk">Mikkel Rask</a>
+    </footer>
+  </main>
+</body>
+</html>
