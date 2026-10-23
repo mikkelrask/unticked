@@ -8,7 +8,7 @@ GitHub Actions workflows are prepared for GitHub Releases and Obtainium. They do
 
 ## Before the first release
 
-- Finish handset testing and choose a project licence.
+- unticked uses the MIT licence. Daily handset use and TalkBack have been checked; test the final signed APK before publication.
 - The permanent application ID is `xyz.raske.unticked`. It replaces the development ID `dev.terminaltodo.spike` and installs as a separate app; select your existing todo.txt again. Keep this ID stable for future releases.
 - Create a private release keystore and keep a backed-up copy outside the repository. Keep the same signing identity for subsequent APK updates.
 - Add these repository Actions secrets:
@@ -16,6 +16,8 @@ GitHub Actions workflows are prepared for GitHub Releases and Obtainium. They do
   - `UNTICKED_KEYSTORE_PASSWORD`: keystore password.
   - `UNTICKED_KEY_ALIAS`: signing key alias.
   - `UNTICKED_KEY_PASSWORD`: key password.
+
+The permanent release key has been generated and the four repository secrets configured. Bitwarden is the chosen backup destination; a private backup export has been prepared locally. Confirm that it has been saved in the vault before publishing the first release.
 
 No permanent keystore is created by the workflows. Keystores are ignored by Git; never commit them or their passwords. The runner decodes its temporary keystore only for the signing step and removes it afterwards. Gradle reads credentials from environment variables, with no secret properties file.
 

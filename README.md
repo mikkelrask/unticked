@@ -19,7 +19,7 @@ Your file stays a normal todo.txt: no accounts, hidden task IDs, or proprietary 
 
 ## Getting started
 
-unticked is currently an early development build. There is no signed release APK; build it from source using Android Studio.
+unticked is currently an early development build. There is no published signed release APK; build it from source using Android Studio.
 
 1. Open Settings → Select file and choose your local todo.txt.
 2. Tap a checkbox to complete or reopen a task; tap its text to edit.
@@ -89,4 +89,6 @@ GitHub Actions build checks and a manually triggered draft APK release workflow 
 
 Handset and emulator checks are ongoing. Battery-management behaviour, accessibility, and recovery under interruption still need wider testing.
 
-A project licence and production signing have not yet been chosen. Bundled JetBrains Mono and Vesper include their [third-party notices](docs/notices/).
+unticked is licensed under the [MIT licence](LICENSE), copyright © 2026 Mikkel Rask. Bundled JetBrains Mono and Vesper retain their own [third-party notices](docs/notices/).
+
+Production signing is configured in GitHub Actions. No public release APK has been published yet.
